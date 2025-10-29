@@ -1,0 +1,377 @@
+/**
+ * Vector Search Service
+ * Performs hybrid search using separate vector and fulltext functions + RRF
+ * Following master-rag implementation pattern
+ */
+
+import { supabase } from '../../models/database.js';
+import { embeddingsService } from '../embeddings/openai.js';
+import { cohereRerankService } from '../rerank/cohere.js';
+import { log } from '../../lib/logger.js';
+
+export interface SearchOptions {
+  topK?: number;
+  vectorThreshold?: number;
+  textThreshold?: number;
+  minRelevanceScore?: number;
+  rrfK?: number; // RRF parameter
+  useReranking?: boolean; // Enable Cohere reranking
+  rerankTopK?: number; // How many results to rerank
+}
+
+export interface SearchResult {
+  chunkId: string;
+  documentId: string;
+  content: string;
+  metadata: Record<string, any>;
+  similarityScore: number;
+  relevanceScore: number;
+  fileName?: string;
+  chunkIndex?: number;
+  pageNumber?: number;
+}
+
+interface RawVectorResult {
+  id: string;
+  document_id: string;
+  content: string;
+  chunk_index: number;
+  page_number: number;
+  metadata: any;
+  similarity: number;
+}
+
+interface RawTextResult {
+  id: string;
+  document_id: string;
+  content: string;
+  chunk_index: number;
+  page_number: number;
+  metadata: any;
+  rank: number;
+}
+
+export class VectorSearchService {
+  /**
+   * Perform hybrid search combining vector similarity and keyword matching
+   * Uses RRF (Reciprocal Rank Fusion) to combine results
+   */
+  async search(
+    query: string,
+    userId: string,
+    options: SearchOptions = {}
+  ): Promise<SearchResult[]> {
+    const {
+      topK = 5,
+      vectorThreshold = 0.0, // No threshold - get all results, let RRF and reranking filter
+      textThreshold = 0.0, // No threshold - if fulltext works, great, if not, vector carries it
+      minRelevanceScore = 0.0, // No threshold - trust the reranking
+      rrfK = 60, // Standard RRF parameter
+      useReranking = true, // Enable reranking by default if available
+      rerankTopK = 20, // Take more candidates for reranking
+    } = options;
+
+    try {
+      log.info('Starting hybrid search', {
+        query,
+        userId,
+        topK,
+        useReranking: useReranking && cohereRerankService.isEnabled(),
+      });
+
+      // Generate query embedding
+      const { embedding: queryEmbedding } = await embeddingsService.embedText(
+        query
+      );
+
+      // Run both searches in parallel
+      const [vectorResults, textResults] = await Promise.all([
+        this.vectorSearch(queryEmbedding, userId, rerankTopK * 2, vectorThreshold),
+        this.fulltextSearch(query, userId, rerankTopK * 2, textThreshold).catch((error) => {
+          log.warn('Fulltext search failed, continuing with vector only', { error: error.message });
+          return [];
+        }),
+      ]);
+
+      log.info('Search results retrieved', {
+        vectorResults: vectorResults.length,
+        textResults: textResults.length,
+      });
+
+      // Combine using Reciprocal Rank Fusion
+      const hybridResults = this.reciprocalRankFusion(
+        vectorResults,
+        textResults,
+        rrfK
+      );
+
+      // Filter by minimum relevance score
+      let filteredResults = hybridResults
+        .filter((r) => r.relevanceScore >= minRelevanceScore)
+        .slice(0, rerankTopK);
+
+      // Apply Cohere reranking if enabled and available
+      if (useReranking && cohereRerankService.isEnabled() && filteredResults.length > 0) {
+        log.info('Applying Cohere reranking', {
+          candidateCount: filteredResults.length,
+        });
+
+        const rerankDocs = filteredResults.map((r) => ({
+          id: r.chunkId,
+          text: r.content,
+        }));
+
+        const rerankedResults = await cohereRerankService.rerank(
+          query,
+          rerankDocs,
+          { topK: topK }
+        );
+
+        // Map reranked results back to SearchResult format
+        filteredResults = rerankedResults.map((rr) => {
+          const original = filteredResults.find((f) => f.chunkId === rr.document.id)!;
+          return {
+            ...original,
+            relevanceScore: rr.relevanceScore, // Use Cohere's rerank score
+          };
+        });
+
+        log.info('Reranking complete', {
+          finalCount: filteredResults.length,
+        });
+      } else {
+        // No reranking, just take top K
+        filteredResults = filteredResults.slice(0, topK);
+      }
+
+      // Enrich with document metadata
+      const enrichedResults = await this.enrichResults(filteredResults);
+
+      log.info('Hybrid search complete', {
+        userId,
+        resultsFound: enrichedResults.length,
+      });
+
+      return enrichedResults;
+    } catch (error) {
+      log.error('Search failed', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Perform vector similarity search
+   */
+  private async vectorSearch(
+    queryEmbedding: number[],
+    userId: string,
+    limit: number,
+    threshold: number
+  ): Promise<RawVectorResult[]> {
+    const { data, error } = await supabase.rpc('match_documents', {
+      query_embedding: queryEmbedding,
+      match_threshold: threshold,
+      match_count: limit,
+      target_user_id: userId,
+    });
+
+    if (error) {
+      log.error('Vector search failed', {
+        error: error.message,
+        userId,
+      });
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Perform full-text search
+   */
+  private async fulltextSearch(
+    query: string,
+    userId: string,
+    limit: number,
+    threshold: number
+  ): Promise<RawTextResult[]> {
+    const { data, error } = await supabase.rpc('search_documents_fulltext', {
+      search_query: query,
+      match_threshold: threshold,
+      match_count: limit,
+      target_user_id: userId,
+    });
+
+    if (error) {
+      log.error('Full-text search failed', {
+        error: error.message,
+        userId,
+      });
+      throw error;
+    }
+
+    return data || [];
+  }
+
+  /**
+   * Combine search results using Reciprocal Rank Fusion (RRF)
+   * RRF Score = 1 / (k + rank)
+   */
+  private reciprocalRankFusion(
+    vectorResults: RawVectorResult[],
+    textResults: RawTextResult[],
+    k: number
+  ): Array<SearchResult & { rank: number }> {
+    // Map to store combined scores by chunk ID
+    const scoreMap = new Map<
+      string,
+      {
+        result: RawVectorResult | RawTextResult;
+        vectorScore: number;
+        textScore: number;
+        combinedScore: number;
+      }
+    >();
+
+    // Process vector search results
+    vectorResults.forEach((result, index) => {
+      const rank = index + 1;
+      const rrfScore = 1.0 / (k + rank);
+
+      scoreMap.set(result.id, {
+        result,
+        vectorScore: rrfScore,
+        textScore: 0.0,
+        combinedScore: rrfScore,
+      });
+    });
+
+    // Process text search results
+    textResults.forEach((result, index) => {
+      const rank = index + 1;
+      const rrfScore = 1.0 / (k + rank);
+
+      const existing = scoreMap.get(result.id);
+      if (existing) {
+        // Chunk found in both searches - add text score
+        existing.textScore = rrfScore;
+        existing.combinedScore += rrfScore;
+      } else {
+        // Chunk only found in text search
+        scoreMap.set(result.id, {
+          result,
+          vectorScore: 0.0,
+          textScore: rrfScore,
+          combinedScore: rrfScore,
+        });
+      }
+    });
+
+    // Sort by combined RRF score
+    const sorted = Array.from(scoreMap.values()).sort(
+      (a, b) => b.combinedScore - a.combinedScore
+    );
+
+    // Convert to SearchResult format
+    return sorted.map((item, index) => {
+      const result = item.result;
+      return {
+        chunkId: result.id,
+        documentId: result.document_id,
+        content: result.content,
+        metadata: result.metadata || {},
+        similarityScore:
+          'similarity' in result ? result.similarity : item.vectorScore,
+        relevanceScore: item.combinedScore,
+        chunkIndex: result.chunk_index,
+        pageNumber: result.page_number,
+        rank: index + 1,
+      };
+    });
+  }
+
+  /**
+   * Enrich search results with document metadata
+   */
+  private async enrichResults(
+    results: SearchResult[]
+  ): Promise<SearchResult[]> {
+    if (results.length === 0) return [];
+
+    const documentIds = [...new Set(results.map((r) => r.documentId))];
+
+    // Fetch document metadata
+    const { data: documents } = await supabase
+      .from('documents')
+      .select('id, file_name')
+      .in('id', documentIds);
+
+    const docMap = new Map(documents?.map((d) => [d.id, d]) || []);
+
+    return results.map((r) => {
+      const doc = docMap.get(r.documentId);
+      return {
+        ...r,
+        fileName: doc?.file_name,
+      };
+    });
+  }
+
+  /**
+   * Search within a specific document
+   */
+  async searchInDocument(
+    query: string,
+    documentId: string,
+    userId: string,
+    options: SearchOptions = {}
+  ): Promise<SearchResult[]> {
+    const { topK = 5, vectorThreshold = 0.3 } = options;
+
+    // Generate query embedding
+    const { embedding: queryEmbedding } = await embeddingsService.embedText(
+      query
+    );
+
+    // Search within document using vector similarity
+    const { data, error } = await supabase.rpc('match_documents', {
+      query_embedding: queryEmbedding,
+      match_threshold: vectorThreshold,
+      match_count: topK,
+      target_user_id: userId,
+    });
+
+    if (error) {
+      log.error('Document search failed', {
+        error: error.message,
+        documentId,
+      });
+      throw error;
+    }
+
+    // Filter to only this document
+    const documentResults = (data || []).filter(
+      (r: RawVectorResult) => r.document_id === documentId
+    );
+
+    // Convert to SearchResult format
+    const results: SearchResult[] = documentResults.map((r: RawVectorResult) => ({
+      chunkId: r.id,
+      documentId: r.document_id,
+      content: r.content,
+      metadata: r.metadata || {},
+      similarityScore: r.similarity,
+      relevanceScore: r.similarity,
+      chunkIndex: r.chunk_index,
+      pageNumber: r.page_number,
+    }));
+
+    return this.enrichResults(results);
+  }
+}
+
+// Singleton instance
+export const vectorSearchService = new VectorSearchService();

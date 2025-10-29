@@ -1,0 +1,778 @@
+openapi: 3.0.3
+info:
+  title: Personal AI Assistant REST API
+  description: REST API for document management, database connections, and user settings
+  version: 1.0.0
+  contact:
+    name: API Support
+
+servers:
+  - url: https://api.example.com
+    description: Production server (Railway)
+  - url: http://localhost:3001
+    description: Local development server
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication
+  /api/auth/signup:
+    post:
+      summary: Create new user account
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  format: password
+                  minLength: 8
+                  example: SecurePass123!
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '409':
+          description: Email already exists
+
+  /api/auth/login:
+    post:
+      summary: Authenticate user
+      tags: [Authentication]
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  format: email
+                password:
+                  type: string
+                  format: password
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '401':
+          description: Invalid credentials
+
+  /api/auth/logout:
+    post:
+      summary: Invalidate user session
+      tags: [Authentication]
+      responses:
+        '200':
+          description: Logout successful
+
+  # Documents
+  /api/documents:
+    get:
+      summary: List user's uploaded documents
+      tags: [Documents]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [processing, completed, failed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Documents retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  documents:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Document'
+                  total:
+                    type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      summary: Upload new document
+      tags: [Documents]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Document uploaded and processing started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          description: Invalid file type or size
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/documents/{documentId}:
+    get:
+      summary: Get document details
+      tags: [Documents]
+      parameters:
+        - $ref: '#/components/parameters/documentId'
+      responses:
+        '200':
+          description: Document retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      summary: Delete document and all chunks
+      tags: [Documents]
+      parameters:
+        - $ref: '#/components/parameters/documentId'
+      responses:
+        '204':
+          description: Document deleted successfully
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # Database Connections
+  /api/database-connections:
+    get:
+      summary: List user's database connections
+      tags: [Database Connections]
+      responses:
+        '200':
+          description: Connections retrieved
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/DatabaseConnection'
+
+    post:
+      summary: Create new database connection
+      tags: [Database Connections]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, dbType, connectionString]
+              properties:
+                name:
+                  type: string
+                  example: Production Analytics
+                dbType:
+                  type: string
+                  enum: [postgresql]
+                  default: postgresql
+                connectionString:
+                  type: string
+                  format: uri
+                  example: postgresql://user:password@host:5432/database
+      responses:
+        '201':
+          description: Connection created and validation started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseConnection'
+        '400':
+          description: Invalid connection string or non-read-only user
+
+  /api/database-connections/{connectionId}:
+    get:
+      summary: Get database connection details
+      tags: [Database Connections]
+      parameters:
+        - $ref: '#/components/parameters/connectionId'
+      responses:
+        '200':
+          description: Connection retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseConnection'
+
+    delete:
+      summary: Delete database connection
+      tags: [Database Connections]
+      parameters:
+        - $ref: '#/components/parameters/connectionId'
+      responses:
+        '204':
+          description: Connection deleted
+
+  /api/database-connections/{connectionId}/schema:
+    get:
+      summary: Get database schema snapshot
+      tags: [Database Connections]
+      parameters:
+        - $ref: '#/components/parameters/connectionId'
+      responses:
+        '200':
+          description: Schema retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DatabaseSchema'
+
+  # Research Reports
+  /api/research:
+    get:
+      summary: List user's research reports
+      tags: [Research]
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, in_progress, completed, failed]
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Reports retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ResearchReport'
+                  total:
+                    type: integer
+
+  /api/research/{reportId}:
+    get:
+      summary: Get research report details
+      tags: [Research]
+      parameters:
+        - $ref: '#/components/parameters/reportId'
+      responses:
+        '200':
+          description: Report retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResearchReport'
+
+    delete:
+      summary: Delete research report
+      tags: [Research]
+      parameters:
+        - $ref: '#/components/parameters/reportId'
+      responses:
+        '204':
+          description: Report deleted
+
+  # User Settings
+  /api/settings:
+    get:
+      summary: Get user settings
+      tags: [Settings]
+      responses:
+        '200':
+          description: Settings retrieved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+
+    put:
+      summary: Update user settings
+      tags: [Settings]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserSettings'
+      responses:
+        '200':
+          description: Settings updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserSettings'
+
+  # Conversations
+  /api/conversations:
+    get:
+      summary: List user's conversations
+      tags: [Conversations]
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+      responses:
+        '200':
+          description: Conversations retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  conversations:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Conversation'
+                  total:
+                    type: integer
+
+    post:
+      summary: Create new conversation
+      tags: [Conversations]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Conversation'
+
+  /api/conversations/{conversationId}:
+    get:
+      summary: Get conversation with messages
+      tags: [Conversations]
+      parameters:
+        - $ref: '#/components/parameters/conversationId'
+      responses:
+        '200':
+          description: Conversation retrieved
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Conversation'
+                  - type: object
+                    properties:
+                      messages:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Message'
+
+    delete:
+      summary: Delete conversation and all messages
+      tags: [Conversations]
+      parameters:
+        - $ref: '#/components/parameters/conversationId'
+      responses:
+        '204':
+          description: Conversation deleted
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    documentId:
+      name: documentId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    connectionId:
+      name: connectionId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    reportId:
+      name: reportId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+    conversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema:
+        type: string
+        format: uuid
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        accessToken:
+          type: string
+        refreshToken:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        fileName:
+          type: string
+        fileType:
+          type: string
+          enum: [pdf, txt, docx, csv, xlsx, md]
+        fileSize:
+          type: integer
+        fileUrl:
+          type: string
+          format: uri
+        status:
+          type: string
+          enum: [processing, completed, failed]
+        errorMessage:
+          type: string
+          nullable: true
+        pageCount:
+          type: integer
+          nullable: true
+        chunkCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        processedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    DatabaseConnection:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        dbType:
+          type: string
+          enum: [postgresql]
+        status:
+          type: string
+          enum: [validating, active, failed]
+        lastValidatedAt:
+          type: string
+          format: date-time
+          nullable: true
+        errorMessage:
+          type: string
+          nullable: true
+        schemaSnapshot:
+          $ref: '#/components/schemas/DatabaseSchema'
+        createdAt:
+          type: string
+          format: date-time
+
+    DatabaseSchema:
+      type: object
+      properties:
+        tables:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              columns:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    type:
+                      type: string
+                    nullable:
+                      type: boolean
+
+    ResearchReport:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        query:
+          type: string
+        depth:
+          type: string
+          enum: [quick, standard, deep]
+        status:
+          type: string
+          enum: [pending, in_progress, completed, failed]
+        progressPercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+        content:
+          type: object
+          nullable: true
+          properties:
+            summary:
+              type: string
+            keyFindings:
+              type: array
+              items:
+                type: string
+            sources:
+              type: array
+              items:
+                $ref: '#/components/schemas/SearchSource'
+            methodology:
+              type: string
+        sourceCount:
+          type: integer
+        modelUsed:
+          type: string
+        totalTokens:
+          type: integer
+        durationSeconds:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        completedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    SearchSource:
+      type: object
+      properties:
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+        snippet:
+          type: string
+        credibilityScore:
+          type: integer
+          minimum: 0
+          maximum: 100
+        domain:
+          type: string
+        publishDate:
+          type: string
+          format: date-time
+          nullable: true
+        author:
+          type: string
+          nullable: true
+        provider:
+          type: string
+
+    UserSettings:
+      type: object
+      properties:
+        defaultChatModel:
+          type: string
+          default: claude-sonnet-4.5
+        defaultRagModel:
+          type: string
+          default: claude-sonnet-4.5
+        defaultSqlModel:
+          type: string
+          default: gpt-4
+        defaultResearchModel:
+          type: string
+          default: claude-sonnet-4.5
+        defaultResearchDepth:
+          type: string
+          enum: [quick, standard, deep]
+          default: standard
+        theme:
+          type: string
+          enum: [light, dark, system]
+          default: light
+
+    Conversation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        conversationId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+        agentUsed:
+          type: string
+          nullable: true
+        modelUsed:
+          type: string
+          nullable: true
+        tokensUsed:
+          type: integer
+          nullable: true
+        latencyMs:
+          type: integer
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: string
