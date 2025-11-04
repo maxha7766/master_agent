@@ -1,6 +1,6 @@
-import type { LLMProvider } from './provider';
-import { OpenAIProvider } from './openai';
-import { AnthropicProvider } from './anthropic';
+import type { LLMProvider } from './provider.js';
+import { OpenAIProvider } from './openai.js';
+import { AnthropicProvider } from './anthropic.js';
 
 /**
  * LLM Provider Factory
