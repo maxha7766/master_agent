@@ -16,9 +16,7 @@ import { Card } from '../../../components/ui/card';
 export default function ResetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [step, setStep] = useState<'request' | 'reset'>(
-    searchParams.get('access_token') ? 'reset' : 'request'
-  );
+  const step = searchParams.get('access_token') ? 'reset' : 'request';
 
   // Step 1: Request reset link
   const [email, setEmail] = useState('');
