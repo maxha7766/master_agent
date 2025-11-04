@@ -1,12 +1,12 @@
 import OpenAI from 'openai';
-import { estimateTokenCount } from '../../lib/utils';
+import { estimateTokenCount } from '../../lib/utils.js';
 import type {
   LLMProvider,
   ChatMessage,
   ChatCompletionOptions,
   ChatCompletionResult,
   StreamChunk,
-} from './provider';
+} from './provider.js';
 
 /**
  * OpenAI LLM Provider

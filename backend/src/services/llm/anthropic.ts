@@ -1,5 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { estimateTokenCount } from '../../lib/utils';
+import { estimateTokenCount } from '../../lib/utils.js';
 import { llmCache } from './cache.js';
 import type {
   LLMProvider,
@@ -7,7 +7,7 @@ import type {
   ChatCompletionOptions,
   ChatCompletionResult,
   StreamChunk,
-} from './provider';
+} from './provider.js';
 
 /**
  * Anthropic LLM Provider
