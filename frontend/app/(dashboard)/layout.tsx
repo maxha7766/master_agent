@@ -5,12 +5,19 @@
  * Main layout with navigation for authenticated users
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
+import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText } from 'lucide-react';
+import { MessageSquare, FileText, Upload, Database, Search, Settings, BarChart3 } from 'lucide-react';
+import UploadDocuments from '../../components/documents/UploadDocuments';
+import KnowledgeBase from '../../components/documents/KnowledgeBase';
+import ResearchDialog from '../../components/research/ResearchDialog';
+import ResearchProgress from '../../components/research/ResearchProgress';
+import type { GraduateResearchProject } from '../../lib/api';
+import { toast } from 'sonner';
 
 export default function DashboardLayout({
   children,
@@ -19,6 +26,38 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { user, loading, signOut } = useAuthStore();
+  const [uploadOpen, setUploadOpen] = useState(false);
+  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [researchOpen, setResearchOpen] = useState(false);
+  const [activeResearchId, setActiveResearchId] = useState<string | null>(null);
+
+  // Connect to WebSocket once at layout level
+  useEffect(() => {
+    if (user) {
+      wsClient.connect().catch((err) => {
+        console.error('WebSocket connection failed:', err);
+      });
+
+      // Listen for budget warnings
+      const unsubscribe = wsClient.onMessage((message) => {
+        if (message.kind === 'budget_warning') {
+          const percentText = message.percentUsed.toFixed(1);
+          toast.warning(`Budget Warning: ${percentText}% Used`, {
+            description: `You've used $${message.currentCost.toFixed(2)} of your $${message.limit.toFixed(2)} monthly budget.`,
+            duration: 10000, // Show for 10 seconds
+            action: {
+              label: 'View Usage',
+              onClick: () => router.push('/usage'),
+            },
+          });
+        }
+      });
+
+      return () => {
+        unsubscribe();
+      };
+    }
+  }, [user, router]);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -47,39 +86,91 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className="h-screen bg-[#212121] flex flex-col overflow-hidden">
       {/* Top Navigation */}
-      <header className="bg-gray-900 border-b border-gray-700 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <header className="bg-[#171717] border-b border-gray-800 flex-shrink-0">
+        <div className="px-4">
+          <div className="flex justify-between items-center h-12">
             <div className="flex items-center space-x-8">
-              <h1 className="text-xl font-bold text-white">Personal AI Assistant</h1>
+              <h1 className="text-lg font-semibold text-white">Personal AI Assistant</h1>
 
-              <nav className="flex items-center space-x-4">
+              <nav className="flex items-center space-x-1">
                 <Link
                   href="/"
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
                 >
                   <MessageSquare className="w-4 h-4" />
                   <span>Chat</span>
                 </Link>
-                <Link
-                  href="/documents"
-                  className="flex items-center space-x-2 px-3 py-2 rounded-md text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+                <button
+                  onClick={() => setUploadOpen(true)}
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Upload className="w-4 h-4" />
+                  <span>Add Knowledge</span>
+                </button>
+                <button
+                  onClick={() => setKnowledgeOpen(true)}
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
                 >
                   <FileText className="w-4 h-4" />
-                  <span>Documents</span>
+                  <span>Knowledge</span>
+                </button>
+                <Link
+                  href="/databases"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Database className="w-4 h-4" />
+                  <span>Databases</span>
                 </Link>
+                <button
+                  onClick={() => setResearchOpen(true)}
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Search className="w-4 h-4" />
+                  <span>Research</span>
+                </button>
+                <Link
+                  href="/usage"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <BarChart3 className="w-4 h-4" />
+                  <span>Usage</span>
+                </Link>
+                <Link
+                  href="/settings"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Settings className="w-4 h-4" />
+                  <span>Settings</span>
+                </Link>
+
+                {/* Active Research Progress */}
+                {activeResearchId && (
+                  <ResearchProgress
+                    projectId={activeResearchId}
+                    onComplete={(project) => {
+                      console.log('Research complete:', project);
+                      // Keep showing for a few seconds so user can download
+                      setTimeout(() => setActiveResearchId(null), 10000);
+                    }}
+                    onError={(error) => {
+                      console.error('Research error:', error);
+                      // Clear after error
+                      setTimeout(() => setActiveResearchId(null), 5000);
+                    }}
+                  />
+                )}
               </nav>
             </div>
 
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-300">{user.email}</span>
+              <span className="text-sm text-gray-400">{user.email}</span>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="border-gray-700 text-gray-300 hover:bg-gray-800"
+                className="text-gray-300 hover:text-white hover:bg-gray-800 text-sm"
               >
                 Sign Out
               </Button>
@@ -88,10 +179,21 @@ export default function DashboardLayout({
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* Main Content - Full Height */}
+      <main className="flex-1 overflow-hidden min-h-0">
         {children}
       </main>
+
+      {/* Popup Modals */}
+      <UploadDocuments open={uploadOpen} onOpenChange={setUploadOpen} />
+      <KnowledgeBase open={knowledgeOpen} onOpenChange={setKnowledgeOpen} />
+      <ResearchDialog
+        isOpen={researchOpen}
+        onClose={() => setResearchOpen(false)}
+        onResearchStarted={(projectId) => {
+          setActiveResearchId(projectId);
+        }}
+      />
     </div>
   );
 }

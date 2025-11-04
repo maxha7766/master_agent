@@ -27,51 +27,63 @@ interface StreamingMessageProps {
 }
 
 export default function StreamingMessage({ message }: StreamingMessageProps) {
-  return (
-    <div className="flex justify-start">
-      <div className="max-w-[80%] rounded-lg px-4 py-3 bg-gray-800 text-white border border-gray-700 shadow-md">
-        {/* Content */}
-        <div className="prose prose-sm max-w-none prose-invert">
-          {message.content.split('\n').map((line, i) => (
-            <p key={i} className="text-white m-0">{line || '\u00A0'}</p>
-          ))}
-
-          {/* Typing indicator */}
-          {!message.isComplete && (
-            <span className="inline-flex items-center">
-              <span className="animate-pulse text-blue-400">▋</span>
-            </span>
-          )}
+  // Show bouncing dots if no content yet
+  if (!message.content) {
+    return (
+      <div className="mb-6">
+        <div className="text-xs text-gray-500 mb-1 font-medium text-left">Assistant</div>
+        <div className="flex gap-1 items-center">
+          <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
+          <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
+          <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
         </div>
+      </div>
+    );
+  }
 
-        {/* Metadata (shown when complete) */}
-        {message.isComplete && message.metadata && (
-          <div className="mt-2 pt-2 border-t border-gray-700 text-xs text-gray-400 flex items-center gap-3">
-            <span>Agent: {message.agent}</span>
-            <span>Model: {message.model}</span>
-            <span>Tokens: {message.metadata.tokensUsed.total.toLocaleString()}</span>
-            <span>Cost: ${message.metadata.costUsd.toFixed(4)}</span>
-            <span>Time: {(message.metadata.latencyMs / 1000).toFixed(1)}s</span>
-          </div>
-        )}
+  return (
+    <div className="mb-6">
+      {/* Agent label */}
+      <div className="text-xs text-gray-500 mb-1 font-medium text-left">Assistant</div>
 
-        {/* Sources (if available) */}
-        {message.sources && message.sources.length > 0 && (
-          <div className="mt-3 pt-2 border-t border-gray-700">
-            <p className="text-xs font-medium text-gray-300 mb-2">Sources:</p>
-            <div className="space-y-1">
-              {message.sources.map((source, i) => (
-                <div
-                  key={i}
-                  className="text-xs text-gray-300 bg-gray-900 border border-gray-700 rounded px-2 py-1"
-                >
-                  {source.documentTitle} (Score: {source.relevanceScore.toFixed(2)})
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Content - no bubble, just text, aligned left, full width */}
+      <div className="text-[15px] leading-relaxed text-gray-100 whitespace-pre-wrap text-left">
+        {message.content}
+        {/* Typing indicator */}
+        {!message.isComplete && (
+          <span className="inline-flex items-center ml-1">
+            <span className="animate-pulse text-gray-400">▋</span>
+          </span>
         )}
       </div>
+
+      {/* Metadata (shown when complete) */}
+      {message.isComplete && message.metadata && (
+        <div className="mt-2 text-xs text-gray-500 flex items-center gap-3">
+          <span>Agent: {message.agent}</span>
+          <span>Model: {message.model}</span>
+          <span>Tokens: {message.metadata.tokensUsed.total.toLocaleString()}</span>
+          <span>Cost: ${message.metadata.costUsd.toFixed(4)}</span>
+          <span>Time: {(message.metadata.latencyMs / 1000).toFixed(1)}s</span>
+        </div>
+      )}
+
+      {/* Sources (if available) */}
+      {message.sources && message.sources.length > 0 && (
+        <div className="mt-3">
+          <p className="text-xs font-medium text-gray-500 mb-2">Sources:</p>
+          <div className="space-y-1">
+            {message.sources.map((source, i) => (
+              <div
+                key={i}
+                className="text-xs text-gray-400 bg-[#1a1a1a] border border-gray-700 rounded px-2 py-1"
+              >
+                {source.documentTitle} (Score: {source.relevanceScore.toFixed(2)})
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

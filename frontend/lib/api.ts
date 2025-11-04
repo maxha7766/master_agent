@@ -111,8 +111,12 @@ export const api = {
   // Conversations
   // ============================================================================
 
-  async getConversations(): Promise<Conversation[]> {
-    return fetchAPI<Conversation[]>('/api/conversations');
+  async getConversations(grouped?: boolean): Promise<Conversation[] | GroupedConversations> {
+    const params = grouped ? '?grouped=true' : '';
+    if (grouped) {
+      return fetchAPI<GroupedConversations>(`/api/conversations${params}`);
+    }
+    return fetchAPI<Conversation[]>(`/api/conversations${params}`);
   },
 
   async getConversation(id: string): Promise<ConversationDetail> {
@@ -195,6 +199,21 @@ export const api = {
   },
 
   // ============================================================================
+  // Settings
+  // ============================================================================
+
+  async getSettings(): Promise<UserSettings> {
+    return fetchAPI<UserSettings>('/api/settings');
+  },
+
+  async updateSettings(updates: Partial<UserSettings>): Promise<UserSettings> {
+    return fetchAPI<UserSettings>('/api/settings', {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  // ============================================================================
   // Usage & Budget
   // ============================================================================
 
@@ -208,11 +227,95 @@ export const api = {
   },
 
   // ============================================================================
+  // Database Connections
+  // ============================================================================
+
+  async getDatabaseConnections(): Promise<DatabaseConnection[]> {
+    const response = await fetchAPI<{ connections: DatabaseConnection[] }>(
+      '/api/database-connections'
+    );
+    return response.connections;
+  },
+
+  async getDatabaseConnection(id: string): Promise<DatabaseConnection> {
+    return fetchAPI<DatabaseConnection>(`/api/database-connections/${id}`);
+  },
+
+  async createDatabaseConnection(
+    name: string,
+    connectionString: string
+  ): Promise<DatabaseConnection> {
+    return fetchAPI<DatabaseConnection>('/api/database-connections', {
+      method: 'POST',
+      body: JSON.stringify({ name, connectionString }),
+    });
+  },
+
+  async updateDatabaseConnection(
+    id: string,
+    updates: {
+      name?: string;
+      connectionString?: string;
+      active?: boolean;
+    }
+  ): Promise<DatabaseConnection> {
+    return fetchAPI<DatabaseConnection>(`/api/database-connections/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(updates),
+    });
+  },
+
+  async deleteDatabaseConnection(id: string): Promise<void> {
+    return fetchAPI<void>(`/api/database-connections/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  async testDatabaseConnection(id: string): Promise<{ success: boolean; message: string }> {
+    return fetchAPI<{ success: boolean; message: string }>(
+      `/api/database-connections/${id}/test`,
+      {
+        method: 'POST',
+      }
+    );
+  },
+
+  // ============================================================================
   // Health Check
   // ============================================================================
 
   async healthCheck(): Promise<{ status: string; timestamp: string }> {
     return fetchAPI<{ status: string; timestamp: string }>('/health');
+  },
+
+  // ============================================================================
+  // Research
+  // ============================================================================
+
+  async executeResearch(query: string, maxResults?: number): Promise<ResearchResult> {
+    return fetchAPI<ResearchResult>('/api/research', {
+      method: 'POST',
+      body: JSON.stringify({ query, maxResults }),
+    });
+  },
+
+  async createGraduateResearch(
+    topic: string,
+    wordCountTarget: number,
+    citationStyle: 'APA' | 'MLA' | 'Chicago'
+  ): Promise<GraduateResearchProject> {
+    return fetchAPI<GraduateResearchProject>('/api/research/graduate', {
+      method: 'POST',
+      body: JSON.stringify({ topic, wordCountTarget, citationStyle }),
+    });
+  },
+
+  async getResearchProject(projectId: string): Promise<GraduateResearchProject> {
+    return fetchAPI<GraduateResearchProject>(`/api/research/graduate/${projectId}`);
+  },
+
+  async getResearchProjects(): Promise<GraduateResearchProject[]> {
+    return fetchAPI<GraduateResearchProject[]>('/api/research/graduate');
   },
 };
 
@@ -284,6 +387,26 @@ export interface SearchResult {
   chunkIndex: number;
 }
 
+export interface DatabaseConnection {
+  id: string;
+  name: string;
+  active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UserSettings {
+  id?: string;
+  user_id?: string;
+  default_chat_model: string;
+  monthly_budget_limit: number;
+  rag_model?: string;
+  sql_model?: string;
+  research_model?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface UsageStats {
   month: string;
   totalMessages: number;
@@ -303,4 +426,60 @@ export interface BudgetStatus {
   warningThreshold: number;
   isWarning: boolean;
   isExceeded: boolean;
+}
+
+export interface GroupedConversations {
+  today: Conversation[];
+  yesterday: Conversation[];
+  lastWeek: Conversation[];
+  older: Conversation[];
+}
+
+export interface ResearchSource {
+  title: string;
+  url: string;
+  content: string;
+  score: number;
+  published_date?: string;
+  author?: string;
+  source: 'tavily' | 'brave';
+}
+
+export interface ResearchResult {
+  success: boolean;
+  data: {
+    query: string;
+    sources: ResearchSource[];
+    summary?: string;
+    domain: string;
+    totalResults: number;
+    document: {
+      id: string;
+      filename: string;
+      title: string;
+    };
+    markdown: string;
+  };
+}
+
+export interface GraduateResearchProject {
+  success: boolean;
+  projectId: string;
+  message?: string;
+  id?: string;
+  topic?: string;
+  status?: 'planning' | 'researching' | 'analyzing' | 'writing' | 'assembling' | 'complete' | 'failed';
+  word_count_target?: number;
+  citation_style?: 'APA' | 'MLA' | 'Chicago';
+  current_phase?: string;
+  progress_metadata?: {
+    sources_count?: number;
+    themes_count?: number;
+    sections_completed?: number;
+    current_word_count?: number;
+  };
+  final_report?: string;
+  final_word_count?: number;
+  created_at?: string;
+  updated_at?: string;
 }

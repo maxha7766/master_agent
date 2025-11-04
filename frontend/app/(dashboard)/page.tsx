@@ -13,7 +13,10 @@ import MessageList from '../../components/chat/MessageList';
 import MessageInput from '../../components/chat/MessageInput';
 import StreamingMessage from '../../components/chat/StreamingMessage';
 import ConversationSidebar from '../../components/chat/ConversationSidebar';
+import ChatSettings from '../../components/chat/ChatSettings';
 import { Card } from '../../components/ui/card';
+import { Button } from '../../components/ui/button';
+import { GearIcon } from '@radix-ui/react-icons';
 
 export default function ChatPage() {
   const user = useAuthStore((state) => state.user);
@@ -28,34 +31,36 @@ export default function ChatPage() {
   } = useConversationStore();
 
   const [wsConnected, setWsConnected] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
-  // Connect to WebSocket on mount
+  // Monitor WebSocket connection status (connection handled at layout level)
   useEffect(() => {
-    if (user) {
-      wsClient.connect().catch((err) => {
-        console.error('WebSocket connection failed:', err);
-      });
+    const unsubscribe = wsClient.onConnectionChange((connected) => {
+      setWsConnected(connected);
+    });
 
-      const unsubscribe = wsClient.onConnectionChange((connected) => {
-        setWsConnected(connected);
-      });
+    // Check initial connection status
+    setWsConnected(wsClient.isConnected());
 
-      return () => {
-        unsubscribe();
-      };
-    }
-  }, [user]);
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   // Create initial conversation if none exists
   useEffect(() => {
     if (user && !currentConversation) {
-      createConversation().then((conv) => {
-        loadConversation(conv.id);
-      }).catch((err) => {
-        console.error('Failed to create/load conversation:', err);
+      createConversation().catch((err) => {
+        console.error('Failed to create conversation:', err);
       });
     }
-  }, [user, currentConversation, createConversation, loadConversation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  const handleNewConversation = async () => {
+    const newConv = await createConversation();
+    await loadConversation(newConv.id);
+  };
 
   const handleSendMessage = async (content: string) => {
     if (!currentConversation || !wsConnected) return;
@@ -64,51 +69,72 @@ export default function ChatPage() {
 
   if (!currentConversation) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-8rem)] bg-black">
+      <div className="flex items-center justify-center h-full bg-[#212121]">
         <p className="text-gray-400">Loading conversation...</p>
       </div>
     );
   }
 
   return (
-    <div className="flex gap-6 h-[calc(100vh-8rem)] bg-black">
+    <div className="flex h-full bg-[#212121] overflow-hidden">
       {/* Conversation Sidebar */}
-      <aside className="w-64 flex-shrink-0">
-        <ConversationSidebar />
+      <aside className="w-64 flex-shrink-0 bg-[#171717] border-r border-gray-800 overflow-hidden">
+        <ConversationSidebar
+          currentConversationId={currentConversation?.id}
+          onNewConversation={handleNewConversation}
+        />
       </aside>
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <Card className="flex-1 flex flex-col p-6 bg-black border border-gray-700 shadow-lg">
-          {/* Connection Status */}
-          {!wsConnected && (
-            <div className="bg-yellow-900/30 border border-yellow-700 text-yellow-300 px-4 py-2 rounded mb-4">
-              Connecting to server...
-            </div>
-          )}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+        {/* Settings Button - Fixed Position at top right of chat area */}
+        <div className="absolute top-3 right-4 z-50">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="text-gray-400 hover:text-white hover:bg-gray-700/50 bg-[#212121]"
+            onClick={() => setSettingsOpen(true)}
+            title="Chat Settings"
+          >
+            <GearIcon className="h-5 w-5" />
+          </Button>
+        </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2 rounded mb-4">
-              {error}
-            </div>
-          )}
-
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto mb-4">
-            <MessageList messages={currentConversation.messages} />
-            {streamingMessage && (
-              <StreamingMessage message={streamingMessage} />
-            )}
+        {/* Connection Status */}
+        {!wsConnected && (
+          <div className="bg-yellow-900/20 border border-yellow-700/50 text-yellow-400 px-4 py-3 mx-4 mt-4 mb-2 rounded-lg flex-shrink-0">
+            Connecting to server...
           </div>
+        )}
 
-          {/* Input */}
-          <MessageInput
-            onSend={handleSendMessage}
-            disabled={!wsConnected || sending}
-          />
-        </Card>
+        {/* Error Message */}
+        {error && (
+          <div className="bg-red-900/20 border border-red-700/50 text-red-400 px-4 py-3 mx-4 mt-4 mb-2 rounded-lg flex-shrink-0">
+            {error}
+          </div>
+        )}
+
+        {/* Messages - Scrollable Area */}
+        <div className="flex-1 overflow-y-auto px-4 py-6">
+          <MessageList messages={currentConversation.messages} />
+          {streamingMessage && (
+            <StreamingMessage message={streamingMessage} />
+          )}
+        </div>
+
+        {/* Input Container - Fixed at Bottom */}
+        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-4 py-4">
+          <div className="max-w-3xl mx-auto">
+            <MessageInput
+              onSend={handleSendMessage}
+              disabled={!wsConnected || sending}
+            />
+          </div>
+        </div>
       </div>
+
+      {/* Chat Settings Modal */}
+      <ChatSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
     </div>
   );
 }

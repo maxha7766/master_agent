@@ -72,30 +72,44 @@ export class VectorSearchService {
     } = options;
 
     try {
-      log.info('Starting hybrid search', {
+      log.info('🔎 SEARCH SERVICE: Starting hybrid search', {
         query,
         userId,
         topK,
+        minRelevanceScore,
+        vectorThreshold,
+        textThreshold,
         useReranking: useReranking && cohereRerankService.isEnabled(),
       });
 
-      // Generate query embedding
+      // Start fulltext search and embedding generation in parallel
+      // Fulltext doesn't need the embedding, so can start immediately
+      const fulltextPromise = this.fulltextSearch(query, userId, rerankTopK * 2, textThreshold).catch((error) => {
+        log.warn('⚠️ SEARCH SERVICE: Fulltext search failed, continuing with vector only', { error: error.message });
+        return [];
+      });
+
+      // Generate query embedding (runs in parallel with fulltext search)
       const { embedding: queryEmbedding } = await embeddingsService.embedText(
         query
       );
 
-      // Run both searches in parallel
+      log.info('📊 SEARCH SERVICE: Embedding generated', {
+        embeddingDimension: queryEmbedding.length
+      });
+
+      // Start vector search now that we have the embedding
+      // Wait for both vector search and fulltext search to complete
       const [vectorResults, textResults] = await Promise.all([
         this.vectorSearch(queryEmbedding, userId, rerankTopK * 2, vectorThreshold),
-        this.fulltextSearch(query, userId, rerankTopK * 2, textThreshold).catch((error) => {
-          log.warn('Fulltext search failed, continuing with vector only', { error: error.message });
-          return [];
-        }),
+        fulltextPromise,
       ]);
 
-      log.info('Search results retrieved', {
+      log.info('✅ SEARCH SERVICE: Raw search results retrieved', {
         vectorResults: vectorResults.length,
         textResults: textResults.length,
+        topVectorScores: vectorResults.slice(0, 3).map(r => r.similarity),
+        topTextRanks: textResults.slice(0, 3).map(r => r.rank),
       });
 
       // Combine using Reciprocal Rank Fusion
@@ -105,18 +119,34 @@ export class VectorSearchService {
         rrfK
       );
 
-      // Filter by minimum relevance score
-      let filteredResults = hybridResults
-        .filter((r) => r.relevanceScore >= minRelevanceScore)
-        .slice(0, rerankTopK);
+      log.info('🔀 SEARCH SERVICE: RRF fusion complete', {
+        hybridResultsCount: hybridResults.length,
+        minRelevanceScore,
+        rerankTopK,
+        topRrfScores: hybridResults.slice(0, 5).map(r => ({
+          score: r.relevanceScore,
+          content: r.content.substring(0, 60)
+        })),
+      });
+
+      // Take top candidates for reranking (don't filter yet - RRF scores are low)
+      let candidateResults = hybridResults.slice(0, rerankTopK);
+
+      log.info('📋 SEARCH SERVICE: Candidates selected for reranking', {
+        candidateCount: candidateResults.length,
+        topRrfScores: candidateResults.slice(0, 3).map(r => r.relevanceScore),
+      });
+
+      let filteredResults: SearchResult[];
 
       // Apply Cohere reranking if enabled and available
-      if (useReranking && cohereRerankService.isEnabled() && filteredResults.length > 0) {
-        log.info('Applying Cohere reranking', {
-          candidateCount: filteredResults.length,
+      if (useReranking && cohereRerankService.isEnabled() && candidateResults.length > 0) {
+        log.info('🎯 SEARCH SERVICE: Applying Cohere reranking', {
+          candidateCount: candidateResults.length,
+          targetTopK: topK
         });
 
-        const rerankDocs = filteredResults.map((r) => ({
+        const rerankDocs = candidateResults.map((r) => ({
           id: r.chunkId,
           text: r.content,
         }));
@@ -127,29 +157,60 @@ export class VectorSearchService {
           { topK: topK }
         );
 
-        // Map reranked results back to SearchResult format
-        filteredResults = rerankedResults.map((rr) => {
-          const original = filteredResults.find((f) => f.chunkId === rr.document.id)!;
+        // Map reranked results back to SearchResult format with Cohere scores
+        const resultsWithCohereScores = rerankedResults.map((rr) => {
+          const original = candidateResults.find((f) => f.chunkId === rr.document.id)!;
           return {
             ...original,
-            relevanceScore: rr.relevanceScore, // Use Cohere's rerank score
+            relevanceScore: rr.relevanceScore, // Use Cohere's rerank score (0-1)
           };
         });
 
-        log.info('Reranking complete', {
-          finalCount: filteredResults.length,
+        log.info('✨ SEARCH SERVICE: Reranking complete', {
+          resultsCount: resultsWithCohereScores.length,
+          topCohereScores: resultsWithCohereScores.slice(0, 5).map(r => ({
+            score: r.relevanceScore,
+            content: r.content.substring(0, 60)
+          })),
+        });
+
+        // NOW filter by minRelevanceScore (applies to Cohere scores 0-1)
+        filteredResults = resultsWithCohereScores.filter(
+          (r) => r.relevanceScore >= minRelevanceScore
+        );
+
+        log.info('🔍 SEARCH SERVICE: After filtering by minRelevanceScore', {
+          filteredCount: filteredResults.length,
+          minRelevanceScore,
+          filteredOutCount: resultsWithCohereScores.length - filteredResults.length
         });
       } else {
-        // No reranking, just take top K
-        filteredResults = filteredResults.slice(0, topK);
+        // No reranking - use RRF scores directly, but lower the threshold
+        // RRF scores are typically 0.01-0.03, so we should use a much lower threshold
+        const rrfMinScore = Math.min(0.01, minRelevanceScore); // Cap at 0.01 for RRF
+
+        filteredResults = candidateResults
+          .filter((r) => r.relevanceScore >= rrfMinScore)
+          .slice(0, topK);
+
+        log.info('No reranking - using RRF scores', {
+          filteredCount: filteredResults.length,
+          rrfMinScore,
+        });
       }
 
       // Enrich with document metadata
       const enrichedResults = await this.enrichResults(filteredResults);
 
-      log.info('Hybrid search complete', {
+      log.info('✅ SEARCH SERVICE: Hybrid search COMPLETE', {
         userId,
         resultsFound: enrichedResults.length,
+        finalResults: enrichedResults.map(r => ({
+          doc: r.fileName,
+          page: r.pageNumber,
+          score: r.relevanceScore,
+          preview: r.content.substring(0, 60)
+        }))
       });
 
       return enrichedResults;

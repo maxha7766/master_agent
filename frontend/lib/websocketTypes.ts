@@ -39,6 +39,7 @@ export type ServerMessage =
   | ProgressMessage
   | CitationMessage
   | ErrorMessage
+  | BudgetWarningMessage
   | PongMessage
   | ConnectionMessage
   | CancelledMessage;
@@ -81,6 +82,14 @@ export interface ErrorMessage {
   code: string;
   conversationId?: string;
   jobId?: string;
+}
+
+export interface BudgetWarningMessage {
+  kind: 'budget_warning';
+  currentCost: number;
+  limit: number;
+  percentUsed: number;
+  threshold: number;
 }
 
 export interface PongMessage {

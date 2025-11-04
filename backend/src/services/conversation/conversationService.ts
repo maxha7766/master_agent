@@ -7,6 +7,7 @@ import { supabase } from '../../models/database.js';
 import { log } from '../../lib/logger.js';
 import { ValidationError, NotFoundError } from '../../lib/errors.js';
 import type { Database } from '../../models/database.types';
+import { conversationTitleGenerator } from './title-generator.js';
 
 type Conversation = Database['public']['Tables']['conversations']['Row'];
 type ConversationInsert = Database['public']['Tables']['conversations']['Insert'];
@@ -249,5 +250,83 @@ export async function getRecentMessages(
   } catch (error) {
     log.error('Error getting recent messages', { conversationId, error });
     return [];
+  }
+}
+
+/**
+ * Generate and update conversation title based on messages
+ */
+export async function generateConversationTitle(
+  conversationId: string,
+  userId: string
+): Promise<string | null> {
+  try {
+    log.info('Generating conversation title', { conversationId, userId });
+
+    // Get recent messages
+    const messages = await getRecentMessages(conversationId, 6);
+
+    if (messages.length === 0) {
+      log.warn('No messages found for title generation', { conversationId });
+      return null;
+    }
+
+    // Convert to format expected by title generator
+    const formattedMessages = messages.map((msg) => ({
+      role: msg.role as 'user' | 'assistant',
+      content: msg.content,
+      timestamp: msg.created_at,
+    }));
+
+    // Generate title
+    const titleResult = await conversationTitleGenerator.generateTitle(
+      formattedMessages,
+      conversationId
+    );
+
+    // Update conversation with generated title
+    await updateConversation(conversationId, userId, {
+      title: titleResult.title,
+    });
+
+    log.info('Conversation title generated and saved', {
+      conversationId,
+      title: titleResult.title,
+      confidence: titleResult.confidence,
+    });
+
+    return titleResult.title;
+  } catch (error) {
+    log.error('Failed to generate conversation title', {
+      conversationId,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return null;
+  }
+}
+
+/**
+ * Check if conversation needs a title (has messages but no title)
+ */
+export async function needsTitle(conversationId: string): Promise<boolean> {
+  try {
+    const { data: conversation, error } = await supabase
+      .from('conversations')
+      .select('title')
+      .eq('id', conversationId)
+      .single();
+
+    if (error || !conversation) {
+      return false;
+    }
+
+    // Needs title if current title is null or "New Conversation"
+    return !conversation.title || conversation.title === 'New Conversation';
+  } catch (error) {
+    log.error('Error checking if conversation needs title', {
+      conversationId,
+      error,
+    });
+    return false;
   }
 }

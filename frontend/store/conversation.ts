@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { api, Conversation, ConversationDetail, Message } from '../lib/api';
 import { wsClient } from '../lib/websocket';
 import { ServerMessage } from '../lib/websocketTypes';
+import { useChatSettingsStore } from '../src/store/chatSettingsStore';
 
 interface StreamingMessage {
   messageId: string;
@@ -30,6 +31,12 @@ interface StreamingMessage {
 interface ConversationState {
   // Data
   conversations: Conversation[];
+  groupedConversations: {
+    today: Conversation[];
+    yesterday: Conversation[];
+    lastWeek: Conversation[];
+    older: Conversation[];
+  } | null;
   currentConversation: ConversationDetail | null;
   streamingMessage: StreamingMessage | null;
 
@@ -40,6 +47,7 @@ interface ConversationState {
 
   // Actions
   loadConversations: () => Promise<void>;
+  loadGroupedConversations: () => Promise<void>;
   loadConversation: (id: string) => Promise<void>;
   createConversation: (title?: string) => Promise<Conversation>;
   updateConversation: (id: string, updates: { title?: string; archived?: boolean }) => Promise<void>;
@@ -59,6 +67,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
   return {
     // Initial state
     conversations: [],
+    groupedConversations: null,
     currentConversation: null,
     streamingMessage: null,
     loading: false,
@@ -69,8 +78,27 @@ export const useConversationStore = create<ConversationState>((set, get) => {
     loadConversations: async () => {
       set({ loading: true, error: null });
       try {
-        const conversations = await api.getConversations();
+        const conversations = await api.getConversations(false) as Conversation[];
         set({ conversations, loading: false });
+      } catch (error) {
+        set({
+          error: error instanceof Error ? error.message : 'Failed to load conversations',
+          loading: false,
+        });
+      }
+    },
+
+    // Load conversations grouped by date
+    loadGroupedConversations: async () => {
+      set({ loading: true, error: null });
+      try {
+        const grouped = await api.getConversations(true) as {
+          today: Conversation[];
+          yesterday: Conversation[];
+          lastWeek: Conversation[];
+          older: Conversation[];
+        };
+        set({ groupedConversations: grouped, loading: false });
       } catch (error) {
         set({
           error: error instanceof Error ? error.message : 'Failed to load conversations',
@@ -98,11 +126,17 @@ export const useConversationStore = create<ConversationState>((set, get) => {
       set({ loading: true, error: null });
       try {
         const conversation = await api.createConversation(title);
+        // Ensure messages array exists
+        const conversationWithMessages = {
+          ...conversation,
+          messages: conversation.messages || [],
+        };
         set((state) => ({
-          conversations: [conversation, ...state.conversations],
+          conversations: [conversationWithMessages, ...state.conversations],
+          currentConversation: conversationWithMessages,
           loading: false,
         }));
-        return conversation;
+        return conversationWithMessages;
       } catch (error) {
         set({
           error: error instanceof Error ? error.message : 'Failed to create conversation',
@@ -158,10 +192,26 @@ export const useConversationStore = create<ConversationState>((set, get) => {
       set({ sending: true, error: null, streamingMessage: null });
 
       try {
+        // Get current chat settings
+        const chatSettings = useChatSettingsStore.getState().settings;
+
         wsClient.send({
           kind: 'chat',
           conversationId,
           content,
+          settings: {
+            disciplineLevel: chatSettings.disciplineLevel,
+            minRelevanceScore: chatSettings.minRelevanceScore,
+            ragOnlyMode: chatSettings.ragOnlyMode,
+            fileTypes: chatSettings.fileTypes,
+            dateRange: {
+              start: chatSettings.dateRange.start?.toISOString() || null,
+              end: chatSettings.dateRange.end?.toISOString() || null,
+            },
+            topK: chatSettings.topK,
+            useReranking: chatSettings.useReranking,
+            hybridSearchBalance: chatSettings.hybridSearchBalance,
+          },
         });
 
         // Add user message to UI immediately
@@ -204,6 +254,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
     reset: () => {
       set({
         conversations: [],
+        groupedConversations: null,
         currentConversation: null,
         streamingMessage: null,
         loading: false,
@@ -251,13 +302,9 @@ function handleWebSocketMessage(
     case 'stream_end':
       const streamingMsg = get().streamingMessage;
       if (streamingMsg) {
-        // Add completed message to conversation
+        // Add completed message to conversation and clear streaming immediately
         set((state) => ({
-          streamingMessage: {
-            ...streamingMsg,
-            isComplete: true,
-            metadata: message.metadata,
-          },
+          streamingMessage: null, // Clear immediately to prevent duplicate display
           currentConversation: state.currentConversation
             ? {
                 ...state.currentConversation,
@@ -273,17 +320,13 @@ function handleWebSocketMessage(
                     tokensUsed: message.metadata.tokensUsed.total,
                     costUsd: message.metadata.costUsd,
                     createdAt: new Date().toISOString(),
+                    sources: streamingMsg.sources, // Include sources if available
                   },
                 ],
               }
             : null,
           sending: false,
         }));
-
-        // Clear streaming message after delay
-        setTimeout(() => {
-          set({ streamingMessage: null });
-        }, 500);
       }
       break;
 

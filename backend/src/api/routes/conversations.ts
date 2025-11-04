@@ -21,22 +21,64 @@ conversationsRouter.use(authMiddleware);
 
 /**
  * GET /api/conversations
- * List user's conversations
+ * List user's conversations with optional date grouping
  */
 conversationsRouter.get(
   '/',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
+      const { grouped } = req.query;
 
       const conversations = await getConversations(userId);
 
-      res.json(conversations);
+      // If grouped=true, return conversations grouped by date
+      if (grouped === 'true') {
+        const grouped = groupConversationsByDate(conversations);
+        res.json(grouped);
+      } else {
+        res.json(conversations);
+      }
     } catch (error) {
       next(error);
     }
   }
 );
+
+/**
+ * Helper: Group conversations by date
+ */
+function groupConversationsByDate(conversations: any[]) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  const lastWeek = new Date(today);
+  lastWeek.setDate(lastWeek.getDate() - 7);
+
+  const groups = {
+    today: [] as any[],
+    yesterday: [] as any[],
+    lastWeek: [] as any[],
+    older: [] as any[],
+  };
+
+  conversations.forEach((conv) => {
+    const updatedAt = new Date(conv.updated_at);
+
+    if (updatedAt >= today) {
+      groups.today.push(conv);
+    } else if (updatedAt >= yesterday) {
+      groups.yesterday.push(conv);
+    } else if (updatedAt >= lastWeek) {
+      groups.lastWeek.push(conv);
+    } else {
+      groups.older.push(conv);
+    }
+  });
+
+  return groups;
+}
 
 /**
  * POST /api/conversations

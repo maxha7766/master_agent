@@ -1,6 +1,11 @@
 import { createClient } from '@supabase/supabase-js';
 import dotenv from 'dotenv';
 import { readFileSync } from 'fs';
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 dotenv.config();
 
@@ -9,42 +14,44 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-const sql = readFileSync('create-users-table.sql', 'utf8');
+const sql = readFileSync(join(__dirname, '..', 'add-sources-metadata.sql'), 'utf8');
 
-console.log('Running migration to create users table...');
+console.log('🔄 Running migration to add sources_used column...\n');
 
 // Split by semicolon and run each statement
-const statements = sql.split(';').filter(s => s.trim());
+const statements = sql.split(';').filter(s => s.trim() && !s.trim().startsWith('--'));
 
 for (const statement of statements) {
   if (!statement.trim()) continue;
-  
-  console.log('\nExecuting:', statement.substring(0, 50) + '...');
-  
+
+  console.log('Executing:', statement.substring(0, 60).replace(/\n/g, ' ') + '...');
+
   const { error } = await supabase.rpc('exec_sql', { sql_query: statement + ';' });
-  
+
   if (error) {
-    // Try direct query if RPC doesn't work
-    const { error: directError } = await supabase.from('_sql').select('*').limit(0);
-    console.log('Note: Using Supabase client library - some statements may need manual execution');
+    console.log('⚠️  RPC method not available, migration may need manual execution');
+    console.log('   Error:', error.message);
+  } else {
+    console.log('✅ Statement executed successfully');
   }
 }
 
-console.log('\n✅ Migration complete! Verifying...');
+console.log('\n📋 Verifying migration...');
 
-// Check if table exists and has data
+// Check if column exists by trying to query it
 const { data, error } = await supabase
-  .from('users')
-  .select('*')
-  .limit(10);
+  .from('messages')
+  .select('id, content, sources_used')
+  .limit(1);
 
 if (error) {
-  console.error('Error checking users table:', error);
-  console.log('\n⚠️  Please run the SQL manually in Supabase SQL Editor:');
-  console.log('   https://supabase.com/dashboard/project/' + process.env.SUPABASE_PROJECT_ID + '/sql');
+  console.error('\n❌ Migration verification failed:', error.message);
+  console.log('\n💡 Please run this SQL manually in Supabase SQL Editor:');
+  console.log('   https://supabase.com/dashboard/project/' + process.env.SUPABASE_PROJECT_ID + '/sql/new\n');
+  console.log(sql);
+  process.exit(1);
 } else {
-  console.log(`Found ${data.length} users in users table`);
-  data.forEach(u => console.log(`  - ${u.email}`));
+  console.log('✅ Migration verified successfully!');
+  console.log('✅ sources_used column has been added to messages table\n');
+  process.exit(0);
 }
-
-process.exit(0);

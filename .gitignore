@@ -1,59 +1,63 @@
-# Environment Variables
-.env
-.env.local
-.env.*.local
-*.env
 
-# Node modules
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
+!.env.example
+# Backup directories
 # Build outputs
-dist/
-build/
-.next/
-out/
-
-# TypeScript
-*.tsbuildinfo
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-.DS_Store
-
-# Testing
-coverage/
-.nyc_output/
-
-# Logs
-logs/
-*.log
-
-# Temporary files
-tmp/
-temp/
-*.tmp
-
 # Database
+# Database dumps
+# Development documentation (archived)
+# Environment
+# Environment Variables
+# IDE
+# Logs
+# Node modules
+# OS
+# Playwright
+# Supabase
+# Temporary files
+# Test data
+# Testing
+# TypeScript
+# macOS
+*.csv
 *.db
+*.dump
+*.env
+*.log
+*.sql.bak
 *.sqlite
 *.sqlite3
-
-# OS
+*.swo
+*.swp
+*.tmp
+*.tsbuildinfo
+*~
 .DS_Store
-Thumbs.db
-
-# Supabase
 .branches/
+.env
+.env*.local
+.env.*.local
+.env.local
+.idea/
+.next/
+.nyc_output/
 .temp/
-
-# Playwright
-test-results/
+.vscode/
+Thumbs.db
+backup_*/
+build/
+coverage/
+dist/
+docs-dev/
+logs/
+node_modules/
+npm-debug.log*
+out/
 playwright-report/
 playwright/.cache/
+temp/
+test-*.txt
+test-data/
+test-results/
+tmp/
+yarn-debug.log*
+yarn-error.log*

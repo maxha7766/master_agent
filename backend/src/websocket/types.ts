@@ -64,6 +64,13 @@ export type ServerMessage =
       conversationId?: string;
     }
   | {
+      kind: 'budget_warning';
+      currentCost: number;
+      limit: number;
+      percentUsed: number;
+      threshold: number;
+    }
+  | {
       kind: 'pong';
       timestamp: number;
       serverTime: number;

@@ -6,7 +6,7 @@
 import type { AuthenticatedWebSocket } from '../server.js';
 import { wsManager } from '../server.js';
 import { routeMessage, executeHandler } from '../../agents/master/router.js';
-import { getRecentMessages, saveMessage } from '../../services/conversation/conversationService.js';
+import { getRecentMessages, saveMessage, generateConversationTitle, needsTitle } from '../../services/conversation/conversationService.js';
 import { BudgetService } from '../../services/llm/budget.js';
 import { calculateLLMCost, countTokens } from '../../lib/utils.js';
 import { log } from '../../lib/logger.js';
@@ -14,10 +14,25 @@ import { BudgetExceededError } from '../../lib/errors.js';
 import { supabase } from '../../models/database.js';
 import type { ServerMessage } from '../types.js';
 
+interface ChatSettings {
+  disciplineLevel?: 'strict' | 'moderate' | 'exploration';
+  minRelevanceScore?: number;
+  ragOnlyMode?: boolean;
+  fileTypes?: string[];
+  dateRange?: {
+    start: string | null;
+    end: string | null;
+  };
+  topK?: number;
+  useReranking?: boolean;
+  hybridSearchBalance?: number;
+}
+
 interface ChatMessagePayload {
   kind: 'chat';
   conversationId: string;
   content: string;
+  settings?: ChatSettings;
 }
 
 /**
@@ -27,7 +42,7 @@ export async function handleChatMessage(
   ws: AuthenticatedWebSocket,
   message: ChatMessagePayload
 ): Promise<void> {
-  const { conversationId, content } = message;
+  const { conversationId, content, settings: chatSettings } = message;
   const userId = ws.userId!;
 
   const startTime = Date.now();
@@ -41,31 +56,34 @@ export async function handleChatMessage(
       contentLength: content.length,
     });
 
-    // Validate conversation belongs to user
-    const { data: conversation, error: convError } = await supabase
-      .from('conversations')
-      .select('id')
-      .eq('id', conversationId)
-      .eq('user_id', userId)
-      .single();
+    // Parallelize database queries and token counting
+    const [conversationResult, settingsResult] = await Promise.all([
+      supabase
+        .from('conversations')
+        .select('id')
+        .eq('id', conversationId)
+        .eq('user_id', userId)
+        .single(),
+      supabase
+        .from('user_settings')
+        .select('default_chat_model')
+        .eq('user_id', userId)
+        .single(),
+    ]);
+
+    const { data: conversation, error: convError } = conversationResult;
+    const { data: settings } = settingsResult;
 
     if (convError || !conversation) {
       sendError(ws, 'Conversation not found', 'CONVERSATION_NOT_FOUND', conversationId);
       return;
     }
 
-    // Get user settings for model preference
-    const { data: settings } = await supabase
-      .from('user_settings')
-      .select('default_chat_model')
-      .eq('user_id', userId)
-      .single();
-
     const model = settings?.default_chat_model || 'claude-sonnet-4-20250514';
     const temperature = 0.7;
 
-    // Estimate cost and check budget
-    const estimatedInputTokens = await countTokens(content, model);
+    // Skip pre-generation token counting - use conservative estimate
+    const estimatedInputTokens = Math.ceil(content.length / 3); // ~3 chars per token
     const estimatedOutputTokens = 1000; // Conservative estimate
     const estimatedCost = calculateLLMCost(
       estimatedInputTokens,
@@ -73,8 +91,10 @@ export async function handleChatMessage(
       model
     );
 
+    let budgetWarning;
     try {
-      await BudgetService.checkBudget(userId, estimatedCost);
+      const budgetCheck = await BudgetService.checkBudget(userId, estimatedCost);
+      budgetWarning = budgetCheck.warning;
     } catch (error) {
       if (error instanceof BudgetExceededError) {
         log.warn('Budget exceeded', { userId, estimatedCost });
@@ -87,6 +107,19 @@ export async function handleChatMessage(
         return;
       }
       throw error;
+    }
+
+    // Send budget warning if threshold reached
+    if (budgetWarning) {
+      const warningMessage: ServerMessage = {
+        kind: 'budget_warning',
+        currentCost: budgetWarning.currentCost,
+        limit: budgetWarning.limit,
+        percentUsed: budgetWarning.percentUsed,
+        threshold: budgetWarning.threshold,
+      };
+      ws.send(JSON.stringify(warningMessage));
+      log.info('Budget warning sent to client', { userId, percentUsed: budgetWarning.percentUsed });
     }
 
     // Save user message
@@ -105,7 +138,22 @@ export async function handleChatMessage(
     }));
 
     // Route message to appropriate agent
+    console.log('\n========== ROUTING STAGE ==========');
+    console.log('Input to router:', {
+      content,
+      userId,
+      historyLength: conversationHistory.length,
+      chatSettings
+    });
+
     const routing = await routeMessage(content, userId, conversationHistory);
+
+    console.log('Routing result:', {
+      intent: routing.intent,
+      handler: routing.handler,
+      confidence: routing.confidence,
+      ragContext: routing.ragContext
+    });
 
     log.info('Message routed', {
       messageId,
@@ -123,9 +171,15 @@ export async function handleChatMessage(
     });
 
     // Execute handler and stream response
+    console.log('\n========== EXECUTION STAGE ==========');
+    console.log('Executing handler:', routing.handler);
+    console.log('Chat settings passed to handler:', chatSettings);
+
     let fullResponse = '';
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
+    let sourcesUsed: any = null;
+    let chunkCount = 0;
 
     for await (const chunk of executeHandler(
       routing,
@@ -133,10 +187,14 @@ export async function handleChatMessage(
       userId,
       conversationHistory,
       model,
-      temperature
+      temperature,
+      chatSettings
     )) {
+      chunkCount++;
+
       if (chunk.content) {
         fullResponse += chunk.content;
+        console.log(`Chunk ${chunkCount}: ${chunk.content.substring(0, 50)}...`);
 
         // Send chunk to client
         sendMessage(ws, {
@@ -146,10 +204,25 @@ export async function handleChatMessage(
         });
       }
 
+      // Capture sources metadata from final chunk
+      if (chunk.sources) {
+        sourcesUsed = chunk.sources;
+        console.log('Sources found in chunk:', {
+          sourcesCount: Array.isArray(chunk.sources) ? chunk.sources.length : 'not an array',
+          sources: chunk.sources
+        });
+      }
+
       if (chunk.done) {
+        console.log('Stream completed. Total chunks:', chunkCount);
         break;
       }
     }
+
+    console.log('\n========== RESPONSE COMPLETE ==========');
+    console.log('Full response length:', fullResponse.length);
+    console.log('Sources used:', sourcesUsed);
+    console.log('Response preview:', fullResponse.substring(0, 200));
 
     // Calculate actual token usage and cost
     totalInputTokens = await countTokens(
@@ -204,6 +277,18 @@ export async function handleChatMessage(
       costUsd: actualCost,
       latencyMs,
     });
+
+    // Generate conversation title if needed (async, don't wait)
+    // Check if this is the first assistant response (conversation needs a title)
+    if (await needsTitle(conversationId)) {
+      log.info('Generating conversation title', { conversationId });
+      generateConversationTitle(conversationId, userId).catch((error) => {
+        log.error('Failed to generate conversation title in background', {
+          conversationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
   } catch (error) {
     log.error('Chat message processing failed', {
       messageId,

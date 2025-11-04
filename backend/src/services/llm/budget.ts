@@ -14,8 +14,17 @@ export class BudgetService {
   /**
    * Check if user has budget available for estimated cost
    * Throws BudgetExceededError if budget is exceeded
+   * Returns budget warning if threshold reached
    */
-  static async checkBudget(userId: string, estimatedCost: number): Promise<void> {
+  static async checkBudget(userId: string, estimatedCost: number): Promise<{
+    warning?: {
+      type: 'budget_warning';
+      currentCost: number;
+      limit: number;
+      percentUsed: number;
+      threshold: number;
+    };
+  }> {
     const month = getCurrentMonth();
 
     // Get current usage for this month
@@ -50,8 +59,11 @@ export class BudgetService {
       newTotal > MONTHLY_BUDGET_USD * BUDGET_WARNING_THRESHOLD &&
       !usage?.budget_warning_sent
     ) {
-      await this.sendBudgetWarning(userId, month, currentCost);
+      const warning = await this.sendBudgetWarning(userId, month, currentCost);
+      return { warning };
     }
+
+    return {};
   }
 
   /**
@@ -189,14 +201,24 @@ export class BudgetService {
       .eq('user_id', userId)
       .eq('month', month);
 
+    const percentUsed = (currentCost / MONTHLY_BUDGET_USD) * 100;
+
     log.warn('Budget warning threshold reached', {
       userId,
       month,
       currentCost: currentCost.toFixed(2),
       limit: MONTHLY_BUDGET_USD,
       threshold: `${BUDGET_WARNING_THRESHOLD * 100}%`,
+      percentUsed: percentUsed.toFixed(1),
     });
 
-    // TODO: Send email/notification to user
+    // Return warning info so it can be sent to client
+    return {
+      type: 'budget_warning' as const,
+      currentCost,
+      limit: MONTHLY_BUDGET_USD,
+      percentUsed,
+      threshold: BUDGET_WARNING_THRESHOLD * 100,
+    } as any;
   }
 }

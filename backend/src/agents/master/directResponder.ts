@@ -34,7 +34,7 @@ async function getUserDocumentContext(userId: string): Promise<string> {
   try {
     const { data: documents, error } = await supabase
       .from('documents')
-      .select('id, file_name, summary, chunk_count, created_at')
+      .select('id, file_name, file_type, summary, chunk_count, row_count, column_count, created_at')
       .eq('user_id', userId)
       .eq('status', 'completed')
       .order('created_at', { ascending: false })
@@ -47,8 +47,18 @@ async function getUserDocumentContext(userId: string): Promise<string> {
     const docList = documents
       .map((doc, i) => {
         const summary = doc.summary ? ` - ${doc.summary.substring(0, 100)}` : '';
-        const chunks = doc.chunk_count ? ` (${doc.chunk_count} chunks)` : '';
-        return `${i + 1}. ${doc.file_name}${chunks}${summary}`;
+
+        // Show different info for tabular vs text documents
+        let details = '';
+        if (doc.row_count && doc.column_count) {
+          // Tabular data (CSV/Excel)
+          details = ` (${doc.row_count} rows, ${doc.column_count} columns)`;
+        } else if (doc.chunk_count) {
+          // Text document (PDF/TXT)
+          details = ` (${doc.chunk_count} chunks)`;
+        }
+
+        return `${i + 1}. ${doc.file_name}${details}${summary}`;
       })
       .join('\n');
 

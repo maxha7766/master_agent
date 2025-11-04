@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { estimateTokenCount } from '../../lib/utils';
+import { llmCache } from './cache.js';
 import type {
   LLMProvider,
   ChatMessage,
@@ -27,6 +28,28 @@ export class AnthropicProvider implements LLMProvider {
     model: string,
     options: ChatCompletionOptions = {}
   ): Promise<ChatCompletionResult> {
+    const temperature = options.temperature ?? 0.7;
+
+    // Only cache low-temperature (deterministic) queries
+    const shouldCache = temperature <= 0.2;
+
+    // Check cache first
+    if (shouldCache) {
+      const cached = llmCache.get(messages, model, temperature);
+      if (cached) {
+        return {
+          content: cached,
+          model,
+          tokensUsed: {
+            input: 0, // Cache hit - no tokens used
+            output: 0,
+            total: 0,
+          },
+          finishReason: 'cache_hit',
+        };
+      }
+    }
+
     // Separate system messages from conversation
     const systemMessage = messages.find((msg) => msg.role === 'system')?.content || '';
     const conversationMessages = messages
@@ -39,7 +62,7 @@ export class AnthropicProvider implements LLMProvider {
     const response = await this.client.messages.create({
       model,
       max_tokens: options.maxTokens || 4096,
-      temperature: options.temperature ?? 0.7,
+      temperature,
       top_p: options.topP,
       system: systemMessage || undefined,
       messages: conversationMessages,
@@ -51,6 +74,11 @@ export class AnthropicProvider implements LLMProvider {
         .filter((block) => block.type === 'text')
         .map((block) => (block.type === 'text' ? block.text : ''))
         .join('') || '';
+
+    // Cache the response if appropriate
+    if (shouldCache && content) {
+      llmCache.set(messages, model, temperature, content);
+    }
 
     return {
       content,

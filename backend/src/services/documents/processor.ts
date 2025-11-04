@@ -7,6 +7,7 @@ import { log } from '../../lib/logger.js';
 import { embeddingsService } from '../embeddings/openai.js';
 import { supabase } from '../../models/database.js';
 import { metadataExtractor } from './metadata.js';
+import { titleExtractor } from './title-extractor.js';
 
 export interface DocumentChunk {
   content: string;
@@ -90,8 +91,19 @@ export class DocumentProcessor {
         contentLength: content.length,
       });
 
+      // Extract document title
+      await this.updateProgress(documentId, 'title', 10, 'Extracting document title...');
+      log.info('Extracting title', { documentId });
+      const titleResult = await titleExtractor.extractTitle(content, fileName);
+
+      log.info('Title extracted', {
+        documentId,
+        title: titleResult.title,
+        confidence: titleResult.confidence
+      });
+
       // Extract metadata using LLM
-      await this.updateProgress(documentId, 'metadata', 15, 'Extracting document metadata...');
+      await this.updateProgress(documentId, 'metadata', 20, 'Extracting document metadata...');
       log.info('Extracting metadata', { documentId });
       const extractedMetadata = await metadataExtractor.extractMetadata(
         content,
@@ -127,12 +139,13 @@ export class DocumentProcessor {
         fileName
       );
 
-      // Update document status with summary
+      // Update document status with summary and title
       await this.updateProgress(documentId, 'finalizing', 95, 'Finalizing...');
-      const { data: updateData, error: updateError } = await supabase
+      const { data: updateData, error: updateError} = await supabase
         .from('documents')
         .update({
           status: 'completed',
+          title: titleResult.title,
           chunk_count: chunks.length,
           summary: extractedMetadata.summary,
           processing_progress: {

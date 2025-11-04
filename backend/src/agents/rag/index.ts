@@ -14,6 +14,7 @@ export interface RAGOptions {
   model?: string;
   temperature?: number;
   includeSources?: boolean;
+  ragOnlyMode?: boolean;
 }
 
 export interface RAGResponse {
@@ -53,13 +54,18 @@ export class RAGAgent {
 
     const {
       topK = 5,
-      minRelevanceScore = 0.3,
+      minRelevanceScore = 0.0, // After RRF + Cohere reranking, scores are normalized differently
       model = 'claude-sonnet-4-20250514',
       temperature = 0.7,
       includeSources = true,
+      ragOnlyMode = false,
     } = options;
 
     try {
+      console.log('\n========== RAG AGENT: GENERATE RESPONSE ==========');
+      console.log('Options received:', options);
+      console.log('RAG Only Mode:', ragOnlyMode);
+
       log.info('RAG query started', {
         query,
         userId,
@@ -67,9 +73,20 @@ export class RAGAgent {
       });
 
       // Step 1: Retrieve relevant document chunks
+      console.log('Calling vectorSearchService.search...');
       const searchResults = await vectorSearchService.search(query, userId, {
         topK,
         minRelevanceScore,
+      });
+
+      console.log('Search results:', {
+        count: searchResults.length,
+        results: searchResults.map(r => ({
+          fileName: r.fileName,
+          pageNumber: r.pageNumber,
+          relevanceScore: r.relevanceScore,
+          contentPreview: r.content?.substring(0, 100)
+        }))
       });
 
       log.info('Retrieved chunks', {
@@ -79,10 +96,13 @@ export class RAGAgent {
 
       // Step 2: Build context from chunks
       const context = this.buildContext(searchResults);
+      console.log('Built context length:', context.length);
+      console.log('Context preview:', context.substring(0, 300));
 
       // Step 3: Generate response with LLM
-      const systemPrompt = this.buildSystemPrompt(includeSources);
+      const systemPrompt = this.buildSystemPrompt(includeSources, ragOnlyMode);
       const userPrompt = this.buildUserPrompt(query, context);
+      console.log('System prompt (first 200 chars):', systemPrompt.substring(0, 200));
 
       const llmResponse = await this.llm.chat(
         [
@@ -138,7 +158,7 @@ export class RAGAgent {
   ): AsyncGenerator<string, RAGResponse, unknown> {
     const {
       topK = 5,
-      minRelevanceScore = 0.3,
+      minRelevanceScore = 0.0, // After RRF + Cohere reranking, scores are normalized differently
       model = 'claude-sonnet-4-20250514',
       temperature = 0.7,
       includeSources = true,
@@ -152,7 +172,7 @@ export class RAGAgent {
 
     // Build prompts
     const context = this.buildContext(searchResults);
-    const systemPrompt = this.buildSystemPrompt(includeSources);
+    const systemPrompt = this.buildSystemPrompt(includeSources, false);
     const userPrompt = this.buildUserPrompt(query, context);
 
     // Stream LLM response
@@ -221,8 +241,20 @@ export class RAGAgent {
    * Build system prompt for RAG
    * Following master-rag conversational approach
    */
-  private buildSystemPrompt(includeSources: boolean): string {
-    const basePrompt = `You are a friendly assistant with strong research skills and access to a RAG database with a large store of the user's documents. When queried, search the RAG database for information to help respond. Be conversational and helpful. You don't have to state your purpose.
+  private buildSystemPrompt(includeSources: boolean, ragOnlyMode: boolean): string {
+    const basePrompt = ragOnlyMode
+      ? `You are a friendly assistant with strong research skills and access to a RAG database with a large store of the user's documents and tabular data. When queried, search the RAG database for information to help respond. Be conversational and helpful.
+
+IMPORTANT: You are in RAG-ONLY MODE. This means you can ONLY answer questions using information from the provided context. You must NOT use any general knowledge or information outside of what's in the documents/tables.
+
+Guidelines:
+1. Be conversational and approachable - Think of yourself as a helpful colleague who's great at finding information
+2. Ask clarifying questions when the user's request is unclear or could be interpreted in multiple ways
+3. Offer to explore related topics - After answering, ask if the user would like you to share related information you found that might be interesting
+4. Stay grounded in your sources - Answer based ONLY on the provided context. If the context is empty or doesn't contain relevant information, you MUST say "I don't have any information about that in the uploaded documents or tables."
+5. Be honest about limitations - If the context doesn't contain enough information, say so clearly and suggest uploading more relevant documents
+6. Provide specific details from the documents when relevant, but explain them in an accessible way`
+      : `You are a friendly assistant with strong research skills and access to a RAG database with a large store of the user's documents. When queried, search the RAG database for information to help respond. Be conversational and helpful. You don't have to state your purpose.
 
 Guidelines:
 1. Be conversational and approachable - Think of yourself as a helpful colleague who's great at finding information
@@ -266,6 +298,52 @@ Let me provide you with what I found, and feel free to ask follow-up questions o
     }
 
     return text.substring(0, maxLength) + '...';
+  }
+
+  /**
+   * Retrieve context chunks WITHOUT generating a response
+   * Returns raw search results for master agent to synthesize
+   */
+  async retrieveContext(
+    query: string,
+    userId: string,
+    options: { topK?: number; minRelevanceScore?: number; ragOnlyMode?: boolean } = {}
+  ): Promise<SearchResult[]> {
+    const { topK = 5, minRelevanceScore = 0.0, ragOnlyMode = false } = options;
+
+    try {
+      log.info('🔍 RAG AGENT: Context retrieval started', {
+        query,
+        userId,
+        topK,
+        minRelevanceScore,
+        ragOnlyMode
+      });
+
+      const searchResults = await vectorSearchService.search(query, userId, {
+        topK,
+        minRelevanceScore,
+      });
+
+      log.info('✅ RAG AGENT: Context retrieved', {
+        userId,
+        chunksFound: searchResults.length,
+        topResults: searchResults.slice(0, 3).map(r => ({
+          doc: r.fileName,
+          page: r.pageNumber,
+          score: r.relevanceScore,
+          preview: r.content?.substring(0, 80)
+        }))
+      });
+
+      return searchResults;
+    } catch (error) {
+      log.error('❌ RAG AGENT: Context retrieval failed', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
+      return [];
+    }
   }
 
   /**

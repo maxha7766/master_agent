@@ -26,9 +26,24 @@ export interface ChatCompletionResult {
   finishReason: string;
 }
 
+export interface SourceMetadata {
+  rag?: Array<{
+    documentId: string;
+    fileName: string;
+    pages?: number[];
+    chunkCount: number;
+  }>;
+  tabular?: Array<{
+    documentId: string;
+    fileName: string;
+    rowCount: number;
+  }>;
+}
+
 export interface StreamChunk {
   content: string;
   done: boolean;
+  sources?: SourceMetadata; // Optional metadata about sources used
 }
 
 /**

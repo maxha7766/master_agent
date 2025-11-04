@@ -12,6 +12,12 @@ import { requestLoggingMiddleware, errorLoggingMiddleware } from './api/middlewa
 import { authRouter } from './api/routes/auth.js';
 import { conversationsRouter } from './api/routes/conversations.js';
 import { documentsRouter } from './api/routes/documents.js';
+import databaseConnectionsRouter from './api/routes/database-connections.js';
+import sqlConnectionsRouter from './api/routes/sql-connections.js';
+import sqlQueriesRouter from './api/routes/sql-queries.js';
+import researchRouter from './api/routes/research.js';
+import settingsRouter from './api/routes/settings.js';
+import usageRouter from './api/routes/usage.js';
 import { wsManager } from './websocket/server.js';
 import { log } from './lib/logger.js';
 import { AppError } from './lib/errors.js';
@@ -61,6 +67,12 @@ app.get('/health', (_req: Request, res: Response) => {
 app.use('/api/auth', authRouter);
 app.use('/api/conversations', conversationsRouter);
 app.use('/api/documents', documentsRouter);
+app.use('/api/database-connections', databaseConnectionsRouter);
+app.use('/api/sql-connections', sqlConnectionsRouter);
+app.use('/api/sql-queries', sqlQueriesRouter);
+app.use('/api/research', researchRouter);
+app.use('/api/settings', settingsRouter);
+app.use('/api/usage', usageRouter);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

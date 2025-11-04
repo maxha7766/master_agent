@@ -1,11 +1,13 @@
 /**
  * Master Agent Router
- * Routes requests to appropriate sub-agents based on intent
+ * All queries go through the master orchestrator
+ * Master agent uses sub-agents (RAG, Tabular, SQL) as tools
  */
 
-import { classifyIntent, type Intent, type IntentResult } from './intentClassifier.js';
-import { generateDirectResponseStream } from './directResponder.js';
+import { handleUserQuery } from './orchestrator.js';
+import { sqlAgent } from '../sql/index.js';
 import { ragAgent } from '../rag/index.js';
+import { classifyIntent, type Intent, type IntentResult } from './intentClassifier.js';
 import { log } from '../../lib/logger.js';
 import type { StreamChunk } from '../../services/llm/provider.js';
 
@@ -25,38 +27,48 @@ export async function routeMessage(
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = []
 ): Promise<RoutingResult> {
   try {
-    // Check if user has documents (needed for RAG routing decision)
-    const hasDocuments = await ragAgent.hasDocuments(userId);
+    // Fast heuristic check for SQL queries (external databases)
+    // Most queries go to orchestrator which handles RAG/Tabular decisions
+    const lowerMessage = userMessage.toLowerCase();
+    const sqlPatterns = [
+      /connect to.*database/i,
+      /query (the|my) (postgres|mysql|external) database/i,
+      /(postgres|mysql|external).*connection/i,
+    ];
 
-    // Classify intent
-    const intentResult: IntentResult = await classifyIntent(
-      userMessage,
-      conversationHistory
-    );
+    const isSqlQuery = sqlPatterns.some(pattern => pattern.test(userMessage));
 
-    // Map intent to handler
-    let handler = mapIntentToHandler(intentResult.intent);
+    if (isSqlQuery) {
+      // Check if user has database connections
+      const hasConnections = await sqlAgent.hasConnections(userId);
 
-    // Override RAG routing if user has no documents
-    if (handler === 'rag' && !hasDocuments) {
-      log.info('RAG intent detected but no documents available, using direct handler', {
-        userId,
-      });
-      handler = 'direct';
+      if (hasConnections) {
+        log.info('SQL query detected with connections', { userId });
+        return {
+          intent: 'sql_query',
+          confidence: 0.9,
+          reasoning: 'External database query pattern detected',
+          handler: 'sql',
+        };
+      } else {
+        log.info('SQL intent detected but no database connections, using direct handler', {
+          userId,
+        });
+      }
     }
 
-    log.info('Message routed', {
-      intent: intentResult.intent,
-      handler,
-      confidence: intentResult.confidence,
-      hasDocuments,
+    // All other queries go to orchestrator (RAG/Tabular/Direct)
+    // Orchestrator will make the intelligent decision about which sub-agents to use
+    log.info('Message routed to orchestrator', {
+      userId,
+      handler: 'rag',
     });
 
     return {
-      intent: intentResult.intent,
-      confidence: intentResult.confidence,
-      reasoning: intentResult.reasoning,
-      handler,
+      intent: 'rag_query',
+      confidence: 1.0,
+      reasoning: 'Routing to orchestrator for intelligent agent selection',
+      handler: 'rag',
     };
   } catch (error) {
     log.error('Routing failed', {
@@ -74,96 +86,78 @@ export async function routeMessage(
 }
 
 /**
- * Execute handler based on routing result
+ * Execute handler - now simplified to just call master orchestrator
+ * Master agent handles all document queries (RAG + Tabular)
+ * SQL agent still separate for external database queries
  */
+export interface ChatSettings {
+  disciplineLevel?: 'strict' | 'moderate' | 'exploration';
+  minRelevanceScore?: number;
+  ragOnlyMode?: boolean;
+  fileTypes?: string[];
+  dateRange?: {
+    start: string | null;
+    end: string | null;
+  };
+  topK?: number;
+  useReranking?: boolean;
+  hybridSearchBalance?: number;
+}
+
 export async function* executeHandler(
   routingResult: RoutingResult,
   userMessage: string,
   userId: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-  model: string = 'gpt-4',
-  temperature: number = 0.7
+  model: string = 'claude-sonnet-4-20250514',
+  temperature: number = 0.7,
+  chatSettings?: ChatSettings
 ): AsyncGenerator<StreamChunk> {
   const { handler, intent } = routingResult;
 
-  switch (handler) {
-    case 'direct':
-      // Handle general chat directly
-      yield* generateDirectResponseStream(
+  // SQL queries to external databases still go to SQL agent
+  if (handler === 'sql') {
+    log.info('Executing SQL handler for external database', { intent, userId });
+
+    try {
+      for await (const chunk of sqlAgent.generateStreamingResponse(
         userMessage,
         userId,
-        conversationHistory,
-        model,
-        temperature
-      );
-      break;
-
-    case 'rag':
-      // Use RAG agent to search documents and generate response
-      log.info('Executing RAG handler', { intent, userId });
-
-      try {
-        // Stream RAG response
-        for await (const chunk of ragAgent.generateStreamingResponse(
-          userMessage,
-          userId,
-          {
-            topK: 5,
-            minRelevanceScore: 0.3,
-            model,
-            temperature,
-            includeSources: true,
-          }
-        )) {
-          yield { content: chunk, done: false };
+        {
+          model,
+          temperature,
         }
-
-        yield { content: '', done: true };
-      } catch (error) {
-        log.error('RAG handler failed', {
-          error: error instanceof Error ? error.message : String(error),
-          userId,
-        });
-        yield {
-          content: 'Sorry, I encountered an error searching your documents. Please try again.',
-          done: true,
-        };
+      )) {
+        yield chunk;
       }
-      break;
-
-    case 'sql':
-      // TODO: Implement in Phase 5 (User Story 3)
-      log.warn('SQL handler not yet implemented', { intent });
+    } catch (error) {
+      log.error('SQL handler failed', {
+        error: error instanceof Error ? error.message : String(error),
+        userId,
+      });
       yield {
-        content: "I can help you query databases, but that feature isn't fully implemented yet. For now, I can answer general questions!",
+        content: 'Sorry, I encountered an error querying your database. Please try again.',
         done: true,
       };
-      break;
+    }
+    return;
+  }
 
-    case 'research':
-      // TODO: Implement in Phase 6 (User Story 4)
-      log.warn('Research handler not yet implemented', { intent });
-      yield {
-        content: "I can help you research topics online, but that feature isn't fully implemented yet. For now, I can answer general questions based on my training data!",
-        done: true,
-      };
-      break;
+  // ALL other queries go through master orchestrator
+  // Master decides if it needs RAG, Tabular, or neither
+  log.info('Routing to master orchestrator', { userId, intent });
 
-    case 'workflow':
-      // TODO: Implement in Phase 7 (User Story 5)
-      log.warn('Workflow handler not yet implemented', { intent });
-      yield {
-        content: "I can help with multi-step tasks, but that feature isn't fully implemented yet. Try breaking your request into simpler steps for now!",
-        done: true,
-      };
-      break;
-
-    default:
-      log.error('Unknown handler', { handler });
-      yield {
-        content: 'Sorry, I encountered an error processing your request.',
-        done: true,
-      };
+  try {
+    yield* handleUserQuery(userMessage, userId, conversationHistory, model, temperature, chatSettings);
+  } catch (error) {
+    log.error('Master orchestrator failed', {
+      error: error instanceof Error ? error.message : String(error),
+      userId,
+    });
+    yield {
+      content: 'Sorry, I encountered an error processing your request. Please try again.',
+      done: true,
+    };
   }
 }
 

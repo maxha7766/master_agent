@@ -22,22 +22,41 @@ export interface IntentResult {
 
 const CLASSIFICATION_PROMPT = `You are an intent classifier for a personal AI assistant with multiple specialized capabilities.
 
+The user has uploaded documents to their personal knowledge base. IMPORTANT: Any question that could potentially be answered from uploaded documents should be classified as "rag_query" to search their documents first.
+
 Classify the user's message into ONE of these categories:
 
-1. **general_chat**: Casual conversation, greetings, general questions not requiring document retrieval, database queries, or web research
+1. **general_chat**: Casual conversation, greetings, general questions about the AI assistant's capabilities
    Examples: "Hello", "How are you?", "What can you help me with?", "Tell me a joke"
 
-2. **rag_query**: Questions about uploaded documents that require semantic search and citation
-   Examples: "What does my contract say about termination?", "Summarize the main findings in my research paper", "Find mentions of X in my documents"
+2. **rag_query**: ANY question that could be answered from uploaded documents - definitions, explanations, summaries, facts, rules, procedures, etc.
+   Examples:
+   - "What does my contract say about termination?"
+   - "Summarize the main findings in my research paper"
+   - "Find mentions of X in my documents"
+   - "What is a balk?" (if user has sports/rules documents)
+   - "Define term X" (if user might have reference documents)
+   - "Explain concept Y" (if user has educational/technical documents)
+   - "What are the rules for Z?" (if user has policy/rules documents)
 
-3. **sql_query**: Questions requiring database queries or data analysis on connected databases
-   Examples: "Show me sales from last month", "What are the top 10 customers?", "Calculate total revenue by region"
+3. **sql_query**: Questions EXPLICITLY about EXTERNAL connected databases (PostgreSQL, MySQL, etc.)
+   Examples: "Query my production database for users", "Connect to my MySQL database and show tables"
 
-4. **research_request**: Questions requiring web search, news lookup, or external research
-   Examples: "What's the latest news on AI?", "Research the history of quantum computing", "Find information about company X"
+   NOTE: Questions about uploaded CSV/Excel files should be classified as "rag_query", NOT "sql_query"
+
+4. **research_request**: Questions EXPLICITLY requesting web search, news, or current events that are clearly outside uploaded documents
+   Examples:
+   - "What's the latest news on AI?" (current events)
+   - "Search the web for company X's recent announcements" (explicitly web search)
+   - "What happened today in politics?" (current events)
 
 5. **multi_step_workflow**: Complex requests requiring multiple steps or agent coordination
-   Examples: "Research company X, find their financial reports, and analyze their revenue trends", "Search my documents for contracts, extract key terms, and create a summary report"
+   Examples: "Research company X online, then find their financial reports in my documents, and analyze their revenue trends", "Search my documents for contracts, extract key terms, and create a summary report"
+
+IMPORTANT DECISION RULES:
+- If the user has documents uploaded, DEFAULT to "rag_query" for ANY informational question (definitions, explanations, facts, etc.)
+- Only use "research_request" if the question EXPLICITLY mentions current events, news, or web search
+- When in doubt between rag_query and research_request, choose rag_query
 
 Respond in JSON format:
 {
