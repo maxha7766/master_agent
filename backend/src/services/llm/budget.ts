@@ -60,9 +60,19 @@ export class BudgetService {
       !usage?.budget_warning_sent
     ) {
       await this.sendBudgetWarning(userId, month, currentCost);
+
+      return {
+        warning: {
+          type: 'budget_warning',
+          currentCost,
+          limit: MONTHLY_BUDGET_USD,
+          percentUsed: (currentCost / MONTHLY_BUDGET_USD) * 100,
+          threshold: BUDGET_WARNING_THRESHOLD,
+        },
+      };
     }
 
-    return undefined;
+    return {};
   }
 
   /**
