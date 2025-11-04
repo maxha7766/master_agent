@@ -4,7 +4,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { log } from '../../lib/logger';
+import { log } from '../../lib/logger.js';
 
 /**
  * Middleware to log all incoming requests with timing

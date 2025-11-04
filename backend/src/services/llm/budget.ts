@@ -1,7 +1,7 @@
-import { supabase } from '../../models/database';
-import { calculateLLMCost, getCurrentMonth } from '../../lib/utils';
-import { BudgetExceededError } from '../../lib/errors';
-import { log } from '../../lib/logger';
+import { supabase } from '../../models/database.js';
+import { calculateLLMCost, getCurrentMonth } from '../../lib/utils.js';
+import { BudgetExceededError } from '../../lib/errors.js';
+import { log } from '../../lib/logger.js';
 
 const MONTHLY_BUDGET_USD = parseFloat(process.env.MONTHLY_BUDGET_USD || '10.00');
 const BUDGET_WARNING_THRESHOLD = 0.8; // Warn at 80%

@@ -3,9 +3,9 @@
  * Routes incoming messages by 'kind' field to appropriate handlers
  */
 
-import { AuthenticatedWebSocket } from './server';
-import { ClientMessage, ServerMessage } from './types';
-import { log } from '../lib/logger';
+import { AuthenticatedWebSocket } from './server.js';
+import { ClientMessage, ServerMessage } from './types.js';
+import { log } from '../lib/logger.js';
 
 // Handler type definitions
 type MessageHandler = (

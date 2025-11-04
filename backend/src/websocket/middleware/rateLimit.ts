@@ -3,8 +3,8 @@
  * Limits message rate to 10 messages per second per connection
  */
 
-import { AuthenticatedWebSocket } from '../server';
-import { log } from '../../lib/logger';
+import { AuthenticatedWebSocket } from '../server.js';
+import { log } from '../../lib/logger.js';
 
 const MAX_MESSAGES_PER_SECOND = parseInt(
   process.env.WS_RATE_LIMIT || '10',

@@ -4,8 +4,8 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { RateLimitError } from '../../lib/errors';
-import { log } from '../../lib/logger';
+import { RateLimitError } from '../../lib/errors.js';
+import { log } from '../../lib/logger.js';
 
 interface RateLimitEntry {
   count: number;

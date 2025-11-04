@@ -4,9 +4,9 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { supabase } from '../../models/database';
-import { UnauthorizedError } from '../../lib/errors';
-import { log } from '../../lib/logger';
+import { supabase } from '../../models/database.js';
+import { UnauthorizedError } from '../../lib/errors.js';
+import { log } from '../../lib/logger.js';
 
 export interface AuthRequest extends Request {
   user?: {

@@ -6,11 +6,11 @@
 import { Server as HTTPServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { IncomingMessage } from 'http';
-import { authMiddleware } from './middleware/auth';
-import { rateLimitMiddleware } from './middleware/rateLimit';
-import { routeMessage } from './router';
-import { log } from '../lib/logger';
-import { ServerMessage } from './types';
+import { authMiddleware } from './middleware/auth.js';
+import { rateLimitMiddleware } from './middleware/rateLimit.js';
+import { routeMessage } from './router.js';
+import { log } from '../lib/logger.js';
+import { ServerMessage } from './types.js';
 
 export interface AuthenticatedWebSocket extends WebSocket {
   userId?: string;

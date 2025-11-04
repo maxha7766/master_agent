@@ -4,8 +4,8 @@
  */
 
 import { IncomingMessage } from 'http';
-import { supabase } from '../../models/database';
-import { log } from '../../lib/logger';
+import { supabase } from '../../models/database.js';
+import { log } from '../../lib/logger.js';
 
 export interface AuthUser {
   id: string;
