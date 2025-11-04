@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { supabase } from '../../models/database.js';
 import { log } from '../../lib/logger.js';
 
@@ -17,7 +17,7 @@ router.use(authMiddleware);
  * GET /api/usage
  * Get usage statistics for the current month (or specified month)
  */
-router.get('/', async (req, res) => {
+router.get('/', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { month } = req.query; // Format: YYYY-MM
@@ -114,7 +114,7 @@ router.get('/', async (req, res) => {
  * GET /api/usage/budget
  * Get current budget status (quick check)
  */
-router.get('/budget', async (req, res) => {
+router.get('/budget', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 

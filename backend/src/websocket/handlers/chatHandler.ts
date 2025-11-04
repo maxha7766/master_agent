@@ -152,7 +152,7 @@ export async function handleChatMessage(
       intent: routing.intent,
       handler: routing.handler,
       confidence: routing.confidence,
-      ragContext: routing.ragContext
+      reasoning: routing.reasoning
     });
 
     log.info('Message routed', {

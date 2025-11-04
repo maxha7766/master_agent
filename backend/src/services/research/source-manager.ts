@@ -94,7 +94,7 @@ export class SourceManager {
         throw new Error(`Semantic Scholar API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { data?: any[] };
 
       const sources: AcademicSource[] = (data.data || []).map((paper: any) => ({
         id: paper.paperId || crypto.randomUUID(),
@@ -152,7 +152,7 @@ export class SourceManager {
         throw new Error(`OpenAlex API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { results?: any[] };
 
       const sources: AcademicSource[] = (data.results || []).map((work: any) => {
         // OpenAlex stores abstracts as inverted index - need to reconstruct
@@ -314,7 +314,7 @@ export class SourceManager {
         throw new Error(`Brave API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { web?: { results?: any[] } };
 
       const sources: WebSource[] = (data.web?.results || []).map((result: any, index: number) => ({
         id: crypto.randomUUID(),
@@ -372,7 +372,7 @@ export class SourceManager {
         throw new Error(`Tavily API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = (await response.json()) as { results?: any[] };
 
       const sources: WebSource[] = (data.results || []).map((result: any) => ({
         id: crypto.randomUUID(),

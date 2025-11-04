@@ -147,7 +147,7 @@ export class ResearchAgent {
       throw new Error(`Tavily API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as { results?: any[] };
 
     return (data.results || []).map((result: any) => ({
       title: result.title || 'Untitled',
@@ -180,7 +180,7 @@ export class ResearchAgent {
       throw new Error(`Brave API error: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as { web?: { results?: any[] } };
 
     return (data.web?.results || []).map((result: any, index: number) => ({
       title: result.title || 'Untitled',

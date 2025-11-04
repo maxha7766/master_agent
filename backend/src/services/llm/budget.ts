@@ -59,11 +59,10 @@ export class BudgetService {
       newTotal > MONTHLY_BUDGET_USD * BUDGET_WARNING_THRESHOLD &&
       !usage?.budget_warning_sent
     ) {
-      const warning = await this.sendBudgetWarning(userId, month, currentCost);
-      return { warning };
+      await this.sendBudgetWarning(userId, month, currentCost);
     }
 
-    return {};
+    return undefined;
   }
 
   /**
@@ -136,7 +135,7 @@ export class BudgetService {
       model,
       inputTokens,
       outputTokens,
-      cost: cost.toFixed(4),
+      cost: Number(cost.toFixed(4)),
     });
   }
 

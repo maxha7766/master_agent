@@ -4,7 +4,7 @@
  */
 
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { supabase } from '../../models/database.js';
 import { log } from '../../lib/logger.js';
 
@@ -17,7 +17,7 @@ router.use(authMiddleware);
  * GET /api/settings
  * Get current user settings
  */
-router.get('/', async (req, res) => {
+router.get('/', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 
@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
  * PUT /api/settings
  * Update user settings
  */
-router.put('/', async (req, res) => {
+router.put('/', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const updates = req.body;

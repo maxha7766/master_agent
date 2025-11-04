@@ -8,7 +8,7 @@
 
 import { Router } from 'express';
 import { supabase } from '../../models/database.js';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { log } from '../../lib/logger.js';
 
 const router = Router();
@@ -20,7 +20,7 @@ router.use(authMiddleware);
  * GET /api/sql-connections
  * List all database connections for the authenticated user
  */
-router.get('/', async (req, res) => {
+router.get('/', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 
@@ -46,7 +46,7 @@ router.get('/', async (req, res) => {
  * GET /api/sql-connections/:id
  * Get a specific database connection
  */
-router.get('/:id', async (req, res) => {
+router.get('/:id', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -77,7 +77,7 @@ router.get('/:id', async (req, res) => {
  * Note: For MVP, storing connection details as plain JSON.
  * In production, these should be encrypted using the encryption service.
  */
-router.post('/', async (req, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { name, description, dbType, connectionDetails } = req.body;
@@ -132,7 +132,7 @@ router.post('/', async (req, res) => {
  * PUT /api/sql-connections/:id
  * Update a database connection
  */
-router.put('/:id', async (req, res) => {
+router.put('/:id', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -178,7 +178,7 @@ router.put('/:id', async (req, res) => {
  * DELETE /api/sql-connections/:id
  * Delete a database connection
  */
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;
@@ -210,7 +210,7 @@ router.delete('/:id', async (req, res) => {
  * For MVP: Just validates the connection details format
  * TODO: Implement actual connection testing
  */
-router.post('/test', async (req, res) => {
+router.post('/test', async (req: AuthRequest, res) => {
   try {
     const { dbType, connectionDetails } = req.body;
 
@@ -259,7 +259,7 @@ router.post('/test', async (req, res) => {
  * For MVP: Returns empty schema
  * TODO: Implement schema discovery service
  */
-router.get('/:id/schema', async (req, res) => {
+router.get('/:id/schema', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { id } = req.params;

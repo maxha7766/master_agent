@@ -5,7 +5,7 @@
  */
 
 import { Router } from 'express';
-import { authMiddleware } from '../middleware/auth.js';
+import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { log } from '../../lib/logger.js';
 import { ResearchAgent } from '../../agents/research/index.js';
 import { SupervisorAgent } from '../../agents/research/supervisor.js';
@@ -27,7 +27,7 @@ interface ResearchRequest {
  * POST /api/research
  * Execute a research query, generate markdown report, and upload to RAG
  */
-router.post('/', async (req, res) => {
+router.post('/', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { query, maxResults = 10 } = req.body as ResearchRequest;
@@ -103,13 +103,7 @@ router.post('/', async (req, res) => {
         document.id,
         userId,
         markdown,
-        'text/markdown',
-        {
-          researchQuery: query,
-          domain: result.domain,
-          sourceCount: result.sources.length,
-          generatedAt: new Date().toISOString(),
-        }
+        'research-report.md'
       );
 
       // Update document status to completed
@@ -163,7 +157,7 @@ router.post('/', async (req, res) => {
  * POST /api/research/summary
  * Generate a summary from research results
  */
-router.post('/summary', async (req, res) => {
+router.post('/summary', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { query, sources } = req.body;
@@ -198,7 +192,7 @@ router.post('/summary', async (req, res) => {
  * POST /api/research/graduate
  * Create a new graduate-level research project
  */
-router.post('/graduate', async (req, res) => {
+router.post('/graduate', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { topic, wordCountTarget, citationStyle, emphasize } = req.body;
@@ -259,7 +253,7 @@ router.post('/graduate', async (req, res) => {
  * GET /api/research/graduate
  * List all graduate research projects for the current user
  */
-router.get('/graduate', async (req, res) => {
+router.get('/graduate', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
 
@@ -283,7 +277,7 @@ router.get('/graduate', async (req, res) => {
  * GET /api/research/graduate/:projectId/sources
  * Get all sources for a research project
  */
-router.get('/graduate/:projectId/sources', async (req, res) => {
+router.get('/graduate/:projectId/sources', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { projectId } = req.params;
@@ -335,7 +329,7 @@ router.get('/graduate/:projectId/sources', async (req, res) => {
  * GET /api/research/graduate/:projectId/themes
  * Get identified themes for a research project
  */
-router.get('/graduate/:projectId/themes', async (req, res) => {
+router.get('/graduate/:projectId/themes', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { projectId } = req.params;
@@ -387,7 +381,7 @@ router.get('/graduate/:projectId/themes', async (req, res) => {
  * GET /api/research/graduate/:projectId
  * Get project status and progress
  */
-router.get('/graduate/:projectId', async (req, res) => {
+router.get('/graduate/:projectId', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { projectId } = req.params;
@@ -427,7 +421,7 @@ router.get('/graduate/:projectId', async (req, res) => {
  * GET /api/research/graduate/:projectId/report
  * Get the final report for a completed research project
  */
-router.get('/graduate/:projectId/report', async (req, res) => {
+router.get('/graduate/:projectId/report', async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.id;
     const { projectId } = req.params;
