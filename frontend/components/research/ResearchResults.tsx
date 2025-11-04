@@ -7,7 +7,7 @@
 
 import { ExternalLink, FileText } from 'lucide-react';
 import { Card } from '../ui/card';
-import type { ResearchSource } from './ResearchDialog';
+import type { ResearchSource } from '../../lib/api';
 
 interface ResearchResultsProps {
   query: string;

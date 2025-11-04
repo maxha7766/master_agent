@@ -16,7 +16,6 @@ import UploadDocuments from '../../components/documents/UploadDocuments';
 import KnowledgeBase from '../../components/documents/KnowledgeBase';
 import ResearchDialog from '../../components/research/ResearchDialog';
 import ResearchProgress from '../../components/research/ResearchProgress';
-import type { GraduateResearchProject } from '../../lib/api';
 import { toast } from 'sonner';
 
 export default function DashboardLayout({

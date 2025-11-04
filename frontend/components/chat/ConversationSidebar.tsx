@@ -40,8 +40,7 @@ export default function ConversationSidebar({
 
   const renderConversationGroup = (
     title: string,
-    conversations: any[],
-    emptyMessage: string
+    conversations: any[]
   ) => {
     if (!conversations || conversations.length === 0) return null;
 
