@@ -16,6 +16,19 @@ export interface ChatMessage {
   kind: 'chat';
   conversationId: string;
   content: string;
+  settings?: {
+    disciplineLevel: 'strict' | 'moderate' | 'exploration';
+    minRelevanceScore: number;
+    ragOnlyMode: boolean;
+    fileTypes: string[];
+    dateRange: {
+      start: string | null;
+      end: string | null;
+    };
+    topK: number;
+    useReranking: boolean;
+    hybridSearchBalance: number;
+  };
 }
 
 export interface CancelMessage {

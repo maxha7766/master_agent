@@ -30,7 +30,7 @@ interface DocumentsState {
   reset: () => void;
 }
 
-export const useDocumentsStore = create<DocumentsState>((set, get) => ({
+export const useDocumentsStore = create<DocumentsState>((set) => ({
   // Initial state
   documents: [],
   currentDocument: null,

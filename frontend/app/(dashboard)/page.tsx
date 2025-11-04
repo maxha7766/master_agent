@@ -14,7 +14,6 @@ import MessageInput from '../../components/chat/MessageInput';
 import StreamingMessage from '../../components/chat/StreamingMessage';
 import ConversationSidebar from '../../components/chat/ConversationSidebar';
 import ChatSettings from '../../components/chat/ChatSettings';
-import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { GearIcon } from '@radix-ui/react-icons';
 

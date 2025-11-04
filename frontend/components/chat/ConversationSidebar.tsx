@@ -98,22 +98,10 @@ export default function ConversationSidebar({
           </div>
         ) : (
           <>
-            {renderConversationGroup('Today', groupedConversations.today, 'No conversations today')}
-            {renderConversationGroup(
-              'Yesterday',
-              groupedConversations.yesterday,
-              'No conversations yesterday'
-            )}
-            {renderConversationGroup(
-              'Last 7 Days',
-              groupedConversations.lastWeek,
-              'No recent conversations'
-            )}
-            {renderConversationGroup(
-              'Older',
-              groupedConversations.older,
-              'No older conversations'
-            )}
+            {renderConversationGroup('Today', groupedConversations.today)}
+            {renderConversationGroup('Yesterday', groupedConversations.yesterday)}
+            {renderConversationGroup('Last 7 Days', groupedConversations.lastWeek)}
+            {renderConversationGroup('Older', groupedConversations.older)}
           </>
         )}
       </div>

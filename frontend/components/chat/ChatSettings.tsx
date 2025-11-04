@@ -5,7 +5,6 @@
  * Allows users to configure RAG behavior and document filtering
  */
 
-import { useState } from 'react';
 import { useChatSettingsStore, type DisciplineLevel } from '../../src/store/chatSettingsStore';
 import {
   Dialog,

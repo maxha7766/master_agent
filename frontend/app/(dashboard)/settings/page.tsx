@@ -23,7 +23,7 @@ const AVAILABLE_MODELS = [
 ];
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<UserSettings | null>(null);
+  const [, setSettings] = useState<UserSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 

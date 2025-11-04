@@ -8,7 +8,6 @@
 import { useEffect, useState } from 'react';
 import { useAuthStore } from '../../store/auth';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Card } from '../ui/card';
 import { Button } from '../ui/button';
 import { FileText, Table, Trash2, Loader2, CheckCircle2, AlertCircle, Search } from 'lucide-react';
 

@@ -142,7 +142,6 @@ export default function ResearchProgress({
           const Icon = stage.icon;
           const isActive = index === currentStageIndex;
           const isCompleted = index < currentStageIndex || (isComplete && stage.id === 'completed');
-          const isPending = index > currentStageIndex;
 
           return (
             <div key={stage.id} className="flex items-center gap-2 flex-1">

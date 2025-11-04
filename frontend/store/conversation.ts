@@ -4,7 +4,7 @@
  */
 
 import { create } from 'zustand';
-import { api, Conversation, ConversationDetail, Message } from '../lib/api';
+import { api, Conversation, ConversationDetail } from '../lib/api';
 import { wsClient } from '../lib/websocket';
 import { ServerMessage } from '../lib/websocketTypes';
 import { useChatSettingsStore } from '../src/store/chatSettingsStore';
@@ -126,10 +126,10 @@ export const useConversationStore = create<ConversationState>((set, get) => {
       set({ loading: true, error: null });
       try {
         const conversation = await api.createConversation(title);
-        // Ensure messages array exists
+        // Ensure messages array exists (new conversations start with no messages)
         const conversationWithMessages = {
           ...conversation,
-          messages: conversation.messages || [],
+          messages: [],
         };
         set((state) => ({
           conversations: [conversationWithMessages, ...state.conversations],
@@ -272,7 +272,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
 function handleWebSocketMessage(
   message: ServerMessage,
   get: () => ConversationState,
-  set: (partial: Partial<ConversationState>) => void
+  set: (partial: Partial<ConversationState> | ((state: ConversationState) => Partial<ConversationState>)) => void
 ): void {
   switch (message.kind) {
     case 'stream_start':

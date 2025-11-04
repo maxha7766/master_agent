@@ -6,6 +6,7 @@
  */
 
 import { useEffect } from 'react';
+import { Toaster } from 'sonner';
 import { useAuthStore } from '../store/auth';
 import { wsClient } from '../lib/websocket';
 
@@ -22,5 +23,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
     };
   }, [initializeAuth]);
 
-  return <>{children}</>;
+  return (
+    <>
+      {children}
+      <Toaster />
+    </>
+  );
 }
