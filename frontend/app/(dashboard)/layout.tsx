@@ -32,30 +32,30 @@ export default function DashboardLayout({
 
   // Connect to WebSocket once at layout level
   useEffect(() => {
-    if (user) {
-      wsClient.connect().catch((err) => {
-        console.error('WebSocket connection failed:', err);
-      });
+    if (!user) return;
 
-      // Listen for budget warnings
-      const unsubscribe = wsClient.onMessage((message) => {
-        if (message.kind === 'budget_warning') {
-          const percentText = message.percentUsed.toFixed(1);
-          toast.warning(`Budget Warning: ${percentText}% Used`, {
-            description: `You've used $${message.currentCost.toFixed(2)} of your $${message.limit.toFixed(2)} monthly budget.`,
-            duration: 10000, // Show for 10 seconds
-            action: {
-              label: 'View Usage',
-              onClick: () => router.push('/usage'),
-            },
-          });
-        }
-      });
+    wsClient.connect().catch((err) => {
+      console.error('WebSocket connection failed:', err);
+    });
 
-      return () => {
-        unsubscribe();
-      };
-    }
+    // Listen for budget warnings
+    const unsubscribe = wsClient.onMessage((message) => {
+      if (message.kind === 'budget_warning') {
+        const percentText = message.percentUsed.toFixed(1);
+        toast.warning(`Budget Warning: ${percentText}% Used`, {
+          description: `You've used $${message.currentCost.toFixed(2)} of your $${message.limit.toFixed(2)} monthly budget.`,
+          duration: 10000, // Show for 10 seconds
+          action: {
+            label: 'View Usage',
+            onClick: () => router.push('/usage'),
+          },
+        });
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [user, router]);
 
   useEffect(() => {
