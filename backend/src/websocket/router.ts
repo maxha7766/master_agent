@@ -164,5 +164,5 @@ registerHandler('ping', handlePing);
 registerHandler('cancel', handleCancel);
 
 // Register chat handler
-import { handleChatMessage } from './handlers/chatHandler';
+import { handleChatMessage } from './handlers/chatHandler.js';
 registerHandler('chat', handleChatMessage);
