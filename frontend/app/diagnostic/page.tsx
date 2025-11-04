@@ -5,7 +5,7 @@
  * Tests all system components and shows status
  */
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { api } from '../../lib/api';
 import { wsClient } from '../../lib/websocket';
