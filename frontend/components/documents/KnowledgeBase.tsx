@@ -50,7 +50,8 @@ export default function KnowledgeBase({ open, onOpenChange }: KnowledgeBaseProps
     setError(null);
 
     try {
-      const response = await fetch('http://localhost:3001/api/documents', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/documents`, {
         headers: {
           Authorization: `Bearer ${session.access_token}`,
         },
@@ -85,7 +86,8 @@ export default function KnowledgeBase({ open, onOpenChange }: KnowledgeBaseProps
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/documents/${documentId}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/documents/${documentId}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${session.access_token}`,

@@ -83,7 +83,8 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
         formData.append('description', tableDescription.trim());
       }
 
-      const response = await fetch('http://localhost:3001/api/documents', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${apiUrl}/api/documents`, {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${session.access_token}`,
@@ -143,7 +144,8 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
 
     const checkStatus = async () => {
       try {
-        const response = await fetch(`http://localhost:3001/api/documents/${documentId}`, {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const response = await fetch(`${apiUrl}/api/documents/${documentId}`, {
           headers: {
             Authorization: `Bearer ${session.access_token}`,
           },
