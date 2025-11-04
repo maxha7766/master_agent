@@ -18,7 +18,6 @@ export default function LoginPage() {
   const router = useRouter();
   const setUser = useAuthStore((state) => state.setUser);
   const setSession = useAuthStore((state) => state.setSession);
-  const setError = useAuthStore((state) => state.setError);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
