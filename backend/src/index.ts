@@ -36,7 +36,7 @@ for (const envVar of requiredEnvVars) {
   }
 }
 
-const PORT = parseInt(process.env.PORT || '4000', 10);
+const PORT = parseInt(process.env.PORT || '3001', 10);
 const app = express();
 const httpServer = createServer(app);
 
