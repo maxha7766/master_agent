@@ -61,3 +61,9 @@ test-results/
 tmp/
 yarn-debug.log*
 yarn-error.log*
+
+# Backups
+master_agent_backups/
+db-backup-*/
+full-backup-*/
+git-backup-*/
