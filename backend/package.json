@@ -15,11 +15,13 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.67.0",
+    "@mendable/firecrawl-js": "^1.29.3",
     "@supabase/supabase-js": "^2.76.1",
     "@types/papaparse": "^5.3.16",
     "@types/pdf-parse": "^1.1.5",
     "cohere-ai": "^7.19.0",
     "dotenv": "^17.2.3",
+    "duck-duck-scrape": "^2.2.7",
     "express": "^5.1.0",
     "multer": "^2.0.2",
     "mysql2": "^3.15.3",

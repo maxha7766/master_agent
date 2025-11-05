@@ -9,6 +9,7 @@ import { authMiddleware, AuthRequest } from '../middleware/auth.js';
 import { log } from '../../lib/logger.js';
 import { ResearchAgent } from '../../agents/research/index.js';
 import { SupervisorAgent } from '../../agents/research/supervisor.js';
+import { topicResearchAgent } from '../../agents/research/topic-agent.js';
 import { supabase } from '../../models/database.js';
 import { documentProcessor } from '../../services/documents/processor.js';
 import crypto from 'crypto';
@@ -470,6 +471,80 @@ router.get('/graduate/:projectId/report', async (req: AuthRequest, res) => {
     });
     res.status(500).json({
       error: 'Failed to get project report',
+      message: error.message || 'Internal server error',
+    });
+  }
+});
+
+/**
+ * POST /api/research/topic
+ * Execute topic research (async)
+ */
+router.post('/topic', async (req: AuthRequest, res) => {
+  try {
+    const userId = req.user!.id;
+    const { topic, numSources = 10 } = req.body;
+
+    // Validate input
+    if (!topic || typeof topic !== 'string' || topic.trim().length === 0) {
+      return res.status(400).json({ error: 'Topic is required' });
+    }
+
+    if (topic.length > 500) {
+      return res.status(400).json({ error: 'Topic too long (max 500 characters)' });
+    }
+
+    if (numSources < 5 || numSources > 30) {
+      return res.status(400).json({ error: 'numSources must be between 5 and 30' });
+    }
+
+    log.info('Topic research request received', { userId, topic, numSources });
+
+    // Start async research (non-blocking)
+    topicResearchAgent
+      .executeTopicResearch(userId, topic, numSources)
+      .catch(error => {
+        log.error('Topic research background task failed', {
+          userId,
+          topic,
+          error: error.message
+        });
+      });
+
+    // Return immediately with project ID
+    // Client will poll for status
+    const projectId = await new Promise<string>((resolve, reject) => {
+      // Give it a moment to create the project
+      setTimeout(async () => {
+        try {
+          const { data: project } = await supabase
+            .from('research_projects')
+            .select('id')
+            .eq('user_id', userId)
+            .eq('research_type', 'topic')
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          if (project) {
+            resolve(project.id);
+          } else {
+            reject(new Error('Failed to create project'));
+          }
+        } catch (error) {
+          reject(error);
+        }
+      }, 500);
+    });
+
+    res.json({ projectId });
+  } catch (error: any) {
+    log.error('Topic research request failed', {
+      userId: req.user?.id,
+      error: error.message
+    });
+    res.status(500).json({
+      error: 'Failed to start topic research',
       message: error.message || 'Internal server error',
     });
   }
