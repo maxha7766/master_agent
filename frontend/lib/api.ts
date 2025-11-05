@@ -317,6 +317,16 @@ export const api = {
   async getResearchProjects(): Promise<GraduateResearchProject[]> {
     return fetchAPI<GraduateResearchProject[]>('/api/research/graduate');
   },
+
+  async createTopicResearch(
+    topic: string,
+    numSources: number = 10
+  ): Promise<{ success: boolean; projectId: string }> {
+    return fetchAPI<{ success: boolean; projectId: string }>('/api/research/topic', {
+      method: 'POST',
+      body: JSON.stringify({ topic, numSources }),
+    });
+  },
 };
 
 // ============================================================================

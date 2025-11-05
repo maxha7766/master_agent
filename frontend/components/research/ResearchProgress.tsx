@@ -22,7 +22,7 @@ interface Stage {
   statuses: string[];
 }
 
-const STAGES: Stage[] = [
+const GRADUATE_STAGES: Stage[] = [
   {
     id: 'researching',
     label: 'Researching',
@@ -50,6 +50,45 @@ const STAGES: Stage[] = [
   {
     id: 'completed',
     label: 'Completed',
+    icon: CheckCircle2,
+    statuses: ['complete'],
+  },
+];
+
+const TOPIC_STAGES: Stage[] = [
+  {
+    id: 'clarifying',
+    label: 'Clarifying',
+    icon: Lightbulb,
+    statuses: ['clarifying'],
+  },
+  {
+    id: 'searching',
+    label: 'Searching',
+    icon: Search,
+    statuses: ['planning', 'researching'],
+  },
+  {
+    id: 'extracting',
+    label: 'Extracting',
+    icon: FileText,
+    statuses: ['extracting'],
+  },
+  {
+    id: 'synthesizing',
+    label: 'Synthesizing',
+    icon: PenTool,
+    statuses: ['analyzing', 'writing'],
+  },
+  {
+    id: 'uploading',
+    label: 'Adding to KB',
+    icon: Upload,
+    statuses: ['assembling'],
+  },
+  {
+    id: 'completed',
+    label: 'Complete',
     icon: CheckCircle2,
     statuses: ['complete'],
   },
@@ -118,6 +157,10 @@ export default function ResearchProgress({
     );
   }
 
+  // Determine research type and select appropriate stages
+  const isTopicResearch = (project as any).research_type === 'topic';
+  const STAGES = isTopicResearch ? TOPIC_STAGES : GRADUATE_STAGES;
+
   // Determine current stage
   const currentStatus = project.status || 'planning';
   const currentStageIndex = STAGES.findIndex(stage =>
@@ -127,12 +170,33 @@ export default function ResearchProgress({
   const isComplete = project.status === 'complete';
   const progress = project.progress_metadata;
 
-  // Build progress details
+  // Build progress details based on research type
   const details = [];
-  if (progress?.sources_count) details.push(`${progress.sources_count} sources`);
-  if (progress?.themes_count) details.push(`${progress.themes_count} themes`);
-  if (progress?.sections_completed) details.push(`${progress.sections_completed}/8 sections`);
-  if (progress?.current_word_count) details.push(`${progress.current_word_count} words`);
+  if (isTopicResearch) {
+    // Topic research details
+    const topicMeta = (project as any).search_engines_used;
+    const numSourcesRequested = (project as any).num_sources_requested;
+    const contentExtractionCount = (project as any).content_extraction_count;
+
+    if (progress?.sources_count) {
+      details.push(`${progress.sources_count}/${numSourcesRequested || '?'} sources found`);
+    }
+    if (contentExtractionCount > 0) {
+      details.push(`${contentExtractionCount} pages extracted`);
+    }
+    if (topicMeta && topicMeta.length > 0) {
+      details.push(`Engines: ${topicMeta.join(', ')}`);
+    }
+    if (progress?.current_word_count) {
+      details.push(`${progress.current_word_count} words`);
+    }
+  } else {
+    // Graduate research details
+    if (progress?.sources_count) details.push(`${progress.sources_count} sources`);
+    if (progress?.themes_count) details.push(`${progress.themes_count} themes`);
+    if (progress?.sections_completed) details.push(`${progress.sections_completed}/8 sections`);
+    if (progress?.current_word_count) details.push(`${progress.current_word_count} words`);
+  }
 
   return (
     <div className="flex flex-col gap-3 p-4 bg-[#1a1a1a] border border-gray-700 rounded-lg">
