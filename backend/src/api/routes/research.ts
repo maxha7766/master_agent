@@ -537,7 +537,7 @@ router.post('/topic', async (req: AuthRequest, res) => {
       }, 500);
     });
 
-    res.json({ projectId });
+    res.json({ success: true, projectId });
   } catch (error: any) {
     log.error('Topic research request failed', {
       userId: req.user?.id,
