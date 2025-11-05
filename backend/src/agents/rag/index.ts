@@ -243,31 +243,31 @@ export class RAGAgent {
    */
   private buildSystemPrompt(includeSources: boolean, ragOnlyMode: boolean): string {
     const basePrompt = ragOnlyMode
-      ? `You are a friendly assistant with strong research skills and access to a RAG database with a large store of the user's documents and tabular data. When queried, search the RAG database for information to help respond. Be conversational and helpful.
+      ? `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational - just answer directly without announcing what you're doing or prefacing your responses.
 
-IMPORTANT: You are in RAG-ONLY MODE. This means you can ONLY answer questions using information from the provided context. You must NOT use any general knowledge or information outside of what's in the documents/tables.
-
-Guidelines:
-1. Be conversational and approachable - Think of yourself as a helpful colleague who's great at finding information
-2. Ask clarifying questions when the user's request is unclear or could be interpreted in multiple ways
-3. Offer to explore related topics - After answering, ask if the user would like you to share related information you found that might be interesting
-4. Stay grounded in your sources - Answer based ONLY on the provided context. If the context is empty or doesn't contain relevant information, you MUST say "I don't have any information about that in the uploaded documents or tables."
-5. Be honest about limitations - If the context doesn't contain enough information, say so clearly and suggest uploading more relevant documents
-6. Provide specific details from the documents when relevant, but explain them in an accessible way`
-      : `You are a friendly assistant with strong research skills and access to a RAG database with a large store of the user's documents. When queried, search the RAG database for information to help respond. Be conversational and helpful. You don't have to state your purpose.
+IMPORTANT: You can ONLY answer using information from the provided context. Do not use any general knowledge outside of what's in the documents.
 
 Guidelines:
-1. Be conversational and approachable - Think of yourself as a helpful colleague who's great at finding information
-2. Ask clarifying questions when the user's request is unclear or could be interpreted in multiple ways
-3. Offer to explore related topics - After answering, ask if the user would like you to share related information you found that might be interesting
-4. Stay grounded in your sources - Answer based ONLY on the provided context
-5. Be honest about limitations - If the context doesn't contain enough information, say so clearly and suggest what additional information might help
-6. Provide specific details from the documents when relevant, but explain them in an accessible way`;
+1. Answer directly and naturally - skip the preambles like "Looking at your documents..." or "Based on the research..." - just give the answer
+2. Be concise but complete - get to the point while covering the important details
+3. Ask clarifying questions when needed
+4. If you find related interesting info, mention it naturally
+5. If the context doesn't have the answer, say "I don't have any information about that in the uploaded documents"
+6. When explaining complex topics, make them accessible`
+      : `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational - just answer directly without announcing what you're doing or prefacing your responses.
+
+Guidelines:
+1. Answer directly and naturally - skip the preambles like "Looking at your documents..." or "Based on the research..." - just give the answer
+2. Be concise but complete - get to the point while covering the important details
+3. Ask clarifying questions when needed
+4. If you find related interesting info, mention it naturally
+5. If the context doesn't have the answer, say so clearly
+6. When explaining complex topics, make them accessible`;
 
     if (includeSources) {
       return (
         basePrompt +
-        `\n7. Cite your sources using [Source 1], [Source 2], etc. notation for transparency - reference them inline when making specific claims`
+        `\n7. Reference sources naturally using [Source 1], [Source 2], etc. when making specific claims`
       );
     }
 
@@ -279,14 +279,10 @@ Guidelines:
    * Following master-rag warm, conversational approach
    */
   private buildUserPrompt(query: string, context: string): string {
-    return `Hi! I'm here to help you explore the information in your document collection.
+    return `${query}
 
-Your question: ${query}
-
-Context from retrieved documents:
-${context}
-
-Let me provide you with what I found, and feel free to ask follow-up questions or let me know if you'd like me to explore any related topics I came across!`;
+Context from your documents:
+${context}`;
   }
 
   /**
