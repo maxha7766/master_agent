@@ -11,9 +11,8 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Upload, Database, Search, Settings, BarChart3 } from 'lucide-react';
-import UploadDocuments from '../../components/documents/UploadDocuments';
-import KnowledgeBase from '../../components/documents/KnowledgeBase';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3 } from 'lucide-react';
+import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
 import ResearchProgress from '../../components/research/ResearchProgress';
 import { toast } from 'sonner';
@@ -25,8 +24,7 @@ export default function DashboardLayout({
 }) {
   const router = useRouter();
   const { user, loading, signOut } = useAuthStore();
-  const [uploadOpen, setUploadOpen] = useState(false);
-  const [knowledgeOpen, setKnowledgeOpen] = useState(false);
+  const [knowledgeDialogOpen, setKnowledgeDialogOpen] = useState(false);
   const [researchOpen, setResearchOpen] = useState(false);
   const [activeResearchId, setActiveResearchId] = useState<string | null>(null);
 
@@ -102,14 +100,7 @@ export default function DashboardLayout({
                   <span>Chat</span>
                 </Link>
                 <button
-                  onClick={() => setUploadOpen(true)}
-                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Add Knowledge</span>
-                </button>
-                <button
-                  onClick={() => setKnowledgeOpen(true)}
+                  onClick={() => setKnowledgeDialogOpen(true)}
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
                 >
                   <FileText className="w-4 h-4" />
@@ -184,8 +175,7 @@ export default function DashboardLayout({
       </main>
 
       {/* Popup Modals */}
-      <UploadDocuments open={uploadOpen} onOpenChange={setUploadOpen} />
-      <KnowledgeBase open={knowledgeOpen} onOpenChange={setKnowledgeOpen} />
+      <KnowledgeDialog isOpen={knowledgeDialogOpen} onClose={() => setKnowledgeDialogOpen(false)} />
       <ResearchDialog
         isOpen={researchOpen}
         onClose={() => setResearchOpen(false)}
