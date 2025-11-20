@@ -14,12 +14,25 @@ import { Label } from '../../../components/ui/label';
 import { toast } from 'sonner';
 
 const AVAILABLE_MODELS = [
-  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4 (Recommended)' },
+  // Claude Models
+  { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5 (Latest - Best for Coding)' },
+  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
   { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
   { value: 'claude-haiku', label: 'Claude Haiku (Fast & Cheap)' },
-  { value: 'gpt-4', label: 'GPT-4' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Fast & Cheap)' },
+
+  // GPT-5 Series
+  { value: 'gpt-5.1', label: 'GPT-5.1 (Latest - Adaptive Reasoning)' },
+  { value: 'gpt-5.1-chat-latest', label: 'GPT-5.1 Chat (Most Conversational)' },
+  { value: 'gpt-5.1-codex', label: 'GPT-5.1 Codex (Best for Coding)' },
+  { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini (Coding - Cheaper)' },
+  { value: 'gpt-5', label: 'GPT-5 (Base Model)' },
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Balanced)' },
+  { value: 'gpt-5-nano', label: 'GPT-5 Nano (Fastest & Cheapest)' },
+
+  // GPT-4 Series (Legacy)
+  { value: 'gpt-4', label: 'GPT-4 (Legacy)' },
+  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Legacy)' },
+  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Legacy)' },
 ];
 
 export default function SettingsPage() {
@@ -28,7 +41,7 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
 
   // Form state
-  const [defaultChatModel, setDefaultChatModel] = useState('claude-sonnet-4-20250514');
+  const [defaultChatModel, setDefaultChatModel] = useState('claude-sonnet-4-5-20250929');
   const [monthlyBudgetLimit, setMonthlyBudgetLimit] = useState(10);
   const [ragModel, setRagModel] = useState('');
   const [sqlModel, setSqlModel] = useState('');

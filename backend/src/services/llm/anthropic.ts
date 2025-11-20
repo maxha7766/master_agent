@@ -142,10 +142,17 @@ export class AnthropicProvider implements LLMProvider {
 
   getSupportedModels(): string[] {
     return [
+      // Claude Sonnet 4.5 (Latest - September 2025)
+      'claude-sonnet-4-5-20250929',
+      'claude-sonnet-4-5', // Alias for latest 4.5
+      // Claude Sonnet 4
       'claude-sonnet-4-20250514',
+      // Claude 3.5 Sonnet
       'claude-3-5-sonnet-20241022',
+      // Claude Haiku
       'claude-haiku',
       'claude-3-haiku-20240307',
+      // Claude Opus
       'claude-3-opus-20240229',
     ];
   }

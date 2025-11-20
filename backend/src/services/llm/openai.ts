@@ -90,6 +90,16 @@ export class OpenAIProvider implements LLMProvider {
 
   getSupportedModels(): string[] {
     return [
+      // GPT-5.1 Series (Latest - November 2025)
+      'gpt-5.1',
+      'gpt-5.1-chat-latest',
+      'gpt-5.1-codex',
+      'gpt-5.1-codex-mini',
+      // GPT-5 Series (August 2025)
+      'gpt-5',
+      'gpt-5-mini',
+      'gpt-5-nano',
+      // GPT-4 Series (Legacy)
       'gpt-4',
       'gpt-4-turbo',
       'gpt-4-turbo-preview',

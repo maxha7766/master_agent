@@ -34,7 +34,7 @@ router.get('/', async (req: AuthRequest, res) => {
           .from('user_settings')
           .insert({
             user_id: userId,
-            default_chat_model: 'claude-sonnet-4-20250514',
+            default_chat_model: 'claude-sonnet-4-5-20250929',
             monthly_budget_limit: 10.0,
           })
           .select()
@@ -101,9 +101,20 @@ router.put('/', async (req: AuthRequest, res) => {
 
     // Validate model names
     const validModels = [
-      'claude-sonnet-4-20250514',
-      'claude-3-5-sonnet-20241022',
-      'claude-haiku',
+      // Claude Models
+      'claude-sonnet-4-5-20250929', // Claude Sonnet 4.5 (latest)
+      'claude-sonnet-4-20250514', // Claude Sonnet 4
+      'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet
+      'claude-haiku', // Claude Haiku (fast/cheap)
+      // GPT-5 Series
+      'gpt-5.1', // GPT-5.1 (latest)
+      'gpt-5.1-chat-latest', // GPT-5.1 conversational
+      'gpt-5.1-codex', // GPT-5.1 coding-optimized
+      'gpt-5.1-codex-mini', // GPT-5.1 coding (smaller)
+      'gpt-5', // GPT-5 base
+      'gpt-5-mini', // GPT-5 (smaller)
+      'gpt-5-nano', // GPT-5 (smallest)
+      // GPT-4 Series (legacy)
       'gpt-4',
       'gpt-4-turbo',
       'gpt-3.5-turbo',
