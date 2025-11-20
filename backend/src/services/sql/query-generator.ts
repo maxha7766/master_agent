@@ -76,7 +76,8 @@ class QueryGeneratorService {
     dbType: DatabaseType,
     options: QueryGenerationOptions
   ): Promise<QueryGenerationResult> {
-    const provider = LLMFactory.getProvider('claude-sonnet-4-5-20250929');
+    // Use GPT-5.1 Codex - optimized for SQL and 60% cheaper than Claude
+    const provider = LLMFactory.getProvider('gpt-5.1-codex');
 
     // Build schema description
     const schemaDescription = this.formatSchemaForPrompt(schema);
@@ -87,7 +88,7 @@ class QueryGeneratorService {
     // Call LLM
     const response = await provider.chat(
       [{ role: 'user', content: prompt }],
-      'claude-sonnet-4-5-20250929',
+      'gpt-5.1-codex',
       {
         temperature: 0.1, // Low temperature for consistency
         maxTokens: 2000,
@@ -284,7 +285,7 @@ Respond with ONLY the JSON object, no additional text.`;
    */
   async explainQuery(sql: string, dbType: DatabaseType): Promise<string> {
     try {
-      const provider = LLMFactory.getProvider('claude-sonnet-4-5-20250929');
+      const provider = LLMFactory.getProvider('gpt-5.1-codex');
 
       const prompt = `You are an expert SQL analyst. Explain the following ${dbType} query in simple terms.
 
@@ -300,7 +301,7 @@ Keep the explanation brief and understandable to non-technical users.`;
 
       const response = await provider.chat(
         [{ role: 'user', content: prompt }],
-        'claude-sonnet-4-5-20250929',
+        'gpt-5.1-codex',
         { temperature: 0.3, maxTokens: 500 }
       );
 
