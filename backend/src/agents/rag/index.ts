@@ -55,7 +55,7 @@ export class RAGAgent {
     const {
       topK = 5,
       minRelevanceScore = 0.0, // After RRF + Cohere reranking, scores are normalized differently
-      model = 'claude-sonnet-4-20250514',
+      model = 'claude-sonnet-4-5-20250929',
       temperature = 0.7,
       includeSources = true,
       ragOnlyMode = false,
@@ -159,7 +159,7 @@ export class RAGAgent {
     const {
       topK = 5,
       minRelevanceScore = 0.0, // After RRF + Cohere reranking, scores are normalized differently
-      model = 'claude-sonnet-4-20250514',
+      model = 'claude-sonnet-4-5-20250929',
       temperature = 0.7,
       includeSources = true,
     } = options;

@@ -75,7 +75,7 @@ export async function generateSQLQuery(
   userQuery: string,
   documents: TabularDocument[],
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-20250514'
+  model: string = 'claude-sonnet-4-5-20250929'
 ): Promise<{ sql: string; explanation: string; documentIds: string[]; needsClarification?: boolean; clarificationQuestion?: string }> {
   try {
     const provider = LLMFactory.getProvider(model);
@@ -286,7 +286,7 @@ export async function formatResults(
   sqlQuery: string,
   results: any[],
   explanation: string,
-  model: string = 'claude-sonnet-4-20250514'
+  model: string = 'claude-sonnet-4-5-20250929'
 ): Promise<string> {
   try {
     const provider = LLMFactory.getProvider(model);
@@ -336,7 +336,7 @@ export async function retrieveData(
   userQuery: string,
   userId: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-20250514'
+  model: string = 'claude-sonnet-4-5-20250929'
 ): Promise<{
   success: boolean;
   data: any[];

@@ -146,7 +146,7 @@ export class AnthropicProvider implements LLMProvider {
       'claude-sonnet-4-5-20250929',
       'claude-sonnet-4-5', // Alias for latest 4.5
       // Claude Sonnet 4
-      'claude-sonnet-4-20250514',
+      'claude-sonnet-4-5-20250929',
       // Claude 3.5 Sonnet
       'claude-3-5-sonnet-20241022',
       // Claude Haiku

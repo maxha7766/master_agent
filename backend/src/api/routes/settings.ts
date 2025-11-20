@@ -103,7 +103,7 @@ router.put('/', async (req: AuthRequest, res) => {
     const validModels = [
       // Claude Models
       'claude-sonnet-4-5-20250929', // Claude Sonnet 4.5 (latest)
-      'claude-sonnet-4-20250514', // Claude Sonnet 4
+      'claude-sonnet-4-5-20250929', // Claude Sonnet 4
       'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet
       'claude-haiku', // Claude Haiku (fast/cheap)
       // GPT-5 Series

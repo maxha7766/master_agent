@@ -22,7 +22,7 @@ export class TitleExtractor {
   async extractTitle(
     content: string,
     fileName: string,
-    model: string = 'claude-sonnet-4-20250514'
+    model: string = 'claude-sonnet-4-5-20250929'
   ): Promise<TitleExtractionResult> {
     try {
       const provider = LLMFactory.getProvider(model);

@@ -147,7 +147,7 @@ export function calculateLLMCost(
     // Claude Models (prices per 1M tokens converted to per 1K)
     'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015 }, // $3/$15 per 1M
     'claude-sonnet-4-5': { input: 0.003, output: 0.015 },
-    'claude-sonnet-4-20250514': { input: 0.003, output: 0.015 },
+    'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015 },
     'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
     'claude-haiku': { input: 0.00025, output: 0.00125 },
     'claude-3-haiku-20240307': { input: 0.00025, output: 0.00125 },

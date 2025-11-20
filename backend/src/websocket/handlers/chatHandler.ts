@@ -79,7 +79,7 @@ export async function handleChatMessage(
       return;
     }
 
-    const model = settings?.default_chat_model || 'claude-sonnet-4-20250514';
+    const model = settings?.default_chat_model || 'claude-sonnet-4-5-20250929';
     const temperature = 0.7;
 
     // Skip pre-generation token counting - use conservative estimate

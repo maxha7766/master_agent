@@ -122,7 +122,7 @@ Output ONLY valid JSON in this exact format:
 
     const result = await this.llmProvider.chat(
       [{ role: 'user', content: prompt }],
-      'claude-sonnet-4-20250514',
+      'claude-sonnet-4-5-20250929',
       {
         maxTokens: 3000,
         temperature: 0.3, // Lower temperature for more consistent analysis
@@ -220,7 +220,7 @@ List any contradictions or debates you find. Return as JSON array:
 
     const result = await this.llmProvider.chat(
       [{ role: 'user', content: prompt }],
-      'claude-sonnet-4-20250514',
+      'claude-sonnet-4-5-20250929',
       {
         maxTokens: 1000,
         temperature: 0.3,

@@ -60,7 +60,7 @@ async function decideSubAgents(
   userQuery: string,
   documents: DocumentInfo[],
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-20250514'
+  model: string = 'claude-sonnet-4-5-20250929'
 ): Promise<{
   useRAG: boolean;
   useTabular: boolean;
@@ -181,7 +181,7 @@ async function* synthesizeResponse(
   ragContext: any[],
   tabularData: any,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-  model: string = 'claude-sonnet-4-20250514',
+  model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
   chatSettings?: ChatSettings
 ): AsyncGenerator<StreamChunk> {
@@ -298,7 +298,7 @@ export async function* handleUserQuery(
   userQuery: string,
   userId: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-20250514',
+  model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
   chatSettings?: ChatSettings
 ): AsyncGenerator<StreamChunk> {

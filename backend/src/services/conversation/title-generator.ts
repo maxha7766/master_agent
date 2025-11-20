@@ -18,7 +18,7 @@ export interface TitleGenerationResult {
 }
 
 export class ConversationTitleGenerator {
-  private readonly DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+  private readonly DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
   private readonly MAX_MESSAGES_TO_ANALYZE = 6; // First 3 exchanges
 
   /**

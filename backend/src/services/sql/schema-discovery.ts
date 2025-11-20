@@ -402,7 +402,7 @@ class SchemaDiscoveryService {
    */
   private async generateSchemaSummary(schema: DatabaseSchema): Promise<string> {
     try {
-      const provider = LLMFactory.getProvider('claude-sonnet-4-20250514');
+      const provider = LLMFactory.getProvider('claude-sonnet-4-5-20250929');
 
       const schemaDescription = schema.tables.map(table => {
         const columnList = table.columns.map(col =>
@@ -420,7 +420,7 @@ Provide only the summary, no preamble.`;
 
       const response = await provider.chat(
         [{ role: 'user', content: prompt }],
-        'claude-sonnet-4-20250514',
+        'claude-sonnet-4-5-20250929',
         { temperature: 0.3, maxTokens: 200 }
       );
 

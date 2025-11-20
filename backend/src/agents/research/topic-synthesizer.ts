@@ -135,7 +135,7 @@ Return ONLY the markdown document, no preamble or explanation.`;
         // Create synthesis promise
         const synthesisPromise = this.llm.chat([
           { role: 'user', content: prompt }
-        ], 'claude-sonnet-4-20250514', {
+        ], 'claude-sonnet-4-5-20250929', {
           temperature: 0.5,
           maxTokens: 16000,
         });
