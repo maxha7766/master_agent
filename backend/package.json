@@ -8,7 +8,10 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "test": "vitest"
+    "test": "vitest",
+    "scrape-excel-docs": "tsx scripts/scrape-excel-docs.ts",
+    "ingest-excel-docs": "tsx scripts/ingest-excel-docs.ts",
+    "setup-global-excel": "tsx scripts/setup-global-excel-knowledge.ts"
   },
   "keywords": [],
   "author": "",
@@ -23,6 +26,7 @@
     "dotenv": "^17.2.3",
     "duck-duck-scrape": "^2.2.7",
     "express": "^5.1.0",
+    "gpt-tokenizer": "^3.4.0",
     "multer": "^2.0.2",
     "mysql2": "^3.15.3",
     "openai": "^6.7.0",
