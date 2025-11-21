@@ -12,6 +12,9 @@ import { LLMFactory } from '../../services/llm/factory.js';
 import { ragAgent } from '../rag/index.js';
 import { tabularAgent } from '../tabular/index.js';
 import { log } from '../../lib/logger.js';
+import { retrieveRelevantMemories, formatMemoriesForPrompt } from '../../services/memory/memoryManager.js';
+import { retrieveRelevantEntities } from '../../services/memory/entityManager.js';
+import { generateTemporalContext, formatTemporalContextForPrompt } from '../../services/temporal/timeContext.js';
 import type { StreamChunk, SourceMetadata } from '../../services/llm/provider.js';
 import type { ChatSettings } from './router.js';
 
@@ -56,16 +59,20 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
 /**
  * Decide which sub-agents to call based on query and available documents
  */
-async function decideSubAgents(
+/**
+ * Fast heuristic-based routing decision (replaces slow LLM call)
+ * Reduces latency from ~1-3 seconds to ~1-5ms
+ */
+function decideSubAgents(
   userQuery: string,
   documents: DocumentInfo[],
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-5-20250929'
-): Promise<{
+  model?: string // Kept for compatibility but not used
+): {
   useRAG: boolean;
   useTabular: boolean;
   reasoning: string;
-}> {
+} {
   if (documents.length === 0) {
     return {
       useRAG: false,
@@ -77,99 +84,68 @@ async function decideSubAgents(
   const hasTextDocs = documents.some((d) => !d.isTabular && d.chunk_count);
   const hasTabularDocs = documents.some((d) => d.isTabular);
 
-  try {
-    const provider = LLMFactory.getProvider(model);
+  const query = userQuery.toLowerCase();
 
-    const documentContext = documents
-      .map((doc) => {
-        if (doc.isTabular) {
-          return `- ${doc.file_name} (Tabular: ${doc.row_count} rows, ${doc.column_count} columns)`;
-        } else {
-          return `- ${doc.file_name} (Text document: ${doc.chunk_count} chunks)`;
-        }
-      })
-      .join('\n');
+  // Tabular data patterns (counts, queries, listings, numbers)
+  const tabularKeywords = /\b(count|how many|sum|total|average|mean|median|max|min|highest|lowest|top|bottom|list|show|table|row|column|csv|excel|data|query|filter|sort|order|group|where|select)\b/i;
+  const hasTabularIntent = tabularKeywords.test(query);
 
-    // Build conversation context
-    const conversationContext = conversationHistory.length > 0
-      ? `\n\n**Recent Conversation:**\n${conversationHistory
-          .slice(-6) // Last 3 exchanges
-          .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 200)}`)
-          .join('\n')}\n`
-      : '';
+  // Follow-up patterns (pronouns that refer to previous conversation)
+  const followUpPatterns = /\b(them|it|those|that|these|show me|list|display)\b/i;
+  const isFollowUp = followUpPatterns.test(query);
 
-    const systemPrompt = `You are a routing agent. Analyze the user's query and available documents to decide which retrieval systems to use.
+  // Check if recent conversation mentioned tabular concepts
+  const recentTabular = conversationHistory.slice(-2).some((msg) =>
+    msg.role === 'assistant' && /\b(rows?|columns?|table|count|total|sum|average)\b/i.test(msg.content)
+  );
 
-**Available Documents:**
-${documentContext}
+  // Semantic search patterns (explanations, summaries, concepts)
+  const ragKeywords = /\b(explain|describe|what is|tell me about|summarize|summary|definition|meaning|concept|why|how does|background|context|information about)\b/i;
+  const hasRAGIntent = ragKeywords.test(query);
 
-**Retrieval Systems:**
-- RAG: For searching text documents (PDFs, documents) using semantic search
-- Tabular: For querying CSV/Excel data using SQL
+  // Decision logic
+  let useTabular = false;
+  let useRAG = false;
+  let reasoning = '';
 
-**Your Task:**
-Decide which system(s) to use. You can use both if needed.
-
-**CRITICAL RULES FOR FOLLOW-UP QUERIES:**
-- If the user's query contains pronouns like "them", "it", "those", "that", or phrases like "list them", "show me those", etc., check the conversation history
-- If recent conversation involved tabular data (counts, queries, listings), you MUST route to Tabular even if the current query seems vague
-- The Tabular system has its own clarification logic - it will ask for clarification if needed
-- Better to route an ambiguous follow-up query to Tabular and let IT handle clarification than to block it entirely
-
-**Examples:**
-- User previous: "how many Pete Crow-Armstrong cards?" → Current: "can you list them?" → USE TABULAR (follow-up about cards)
-- User previous: "what are the highest prices?" → Current: "show me the top 10" → USE TABULAR (follow-up about prices)
-- User: "tell me about AI" → USE RAG (if text docs) or neither (if only tabular docs)
-
-**Response Format (JSON):**
-{
-  "useRAG": true/false,
-  "useTabular": true/false,
-  "reasoning": "Brief explanation"
-}`;
-
-    const userPrompt = `${conversationContext}
-User Query: "${userQuery}"
-
-Which retrieval system(s) should be used?`;
-
-    const response = await provider.chat(
-      [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
-      model,
-      { temperature: 0.1 }
-    );
-
-    const decision = JSON.parse(response.content);
-
-    // Validate decision against available documents
-    if (decision.useRAG && !hasTextDocs) {
-      decision.useRAG = false;
-      decision.reasoning += ' (No text documents available)';
-    }
-    if (decision.useTabular && !hasTabularDocs) {
-      decision.useTabular = false;
-      decision.reasoning += ' (No tabular documents available)';
-    }
-
-    log.info('Sub-agent decision made', {
-      useRAG: decision.useRAG,
-      useTabular: decision.useTabular,
-      reasoning: decision.reasoning,
-    });
-
-    return decision;
-  } catch (error) {
-    log.error('Sub-agent decision failed', { error });
-    // Fallback: use RAG if text docs, tabular if tabular docs
-    return {
-      useRAG: hasTextDocs,
-      useTabular: hasTabularDocs,
-      reasoning: 'Fallback decision based on available documents',
-    };
+  // Prioritize tabular if we have strong signals
+  if (hasTabularDocs && (hasTabularIntent || (isFollowUp && recentTabular))) {
+    useTabular = true;
+    reasoning = hasTabularIntent
+      ? 'Tabular keywords detected (count/list/query)'
+      : 'Follow-up to recent tabular conversation';
   }
+  // Use RAG for semantic/explanatory queries
+  else if (hasTextDocs && hasRAGIntent) {
+    useRAG = true;
+    reasoning = 'Semantic search keywords detected (explain/describe/what is)';
+  }
+  // Default: use RAG if we have text docs and no strong tabular signal
+  else if (hasTextDocs && !hasTabularIntent) {
+    useRAG = true;
+    reasoning = 'Text search (no specific tabular intent)';
+  }
+  // Fallback to tabular if only tabular docs available
+  else if (hasTabularDocs && !hasTextDocs) {
+    useTabular = true;
+    reasoning = 'Only tabular documents available';
+  }
+  // Last resort: direct response (no retrieval)
+  else {
+    reasoning = 'No clear retrieval pattern - direct response';
+  }
+
+  log.info('Sub-agent decision made (heuristic)', {
+    useRAG,
+    useTabular,
+    reasoning,
+    hasTabularIntent,
+    hasRAGIntent,
+    isFollowUp,
+    recentTabular
+  });
+
+  return { useRAG, useTabular, reasoning };
 }
 
 /**
@@ -177,15 +153,59 @@ Which retrieval system(s) should be used?`;
  */
 async function* synthesizeResponse(
   userQuery: string,
+  userId: string,
   documents: DocumentInfo[],
   ragContext: any[],
   tabularData: any,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string }>,
   model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
-  chatSettings?: ChatSettings
+  chatSettings?: ChatSettings,
+  conversationMetadata?: { startTime?: Date; lastMessageTime?: Date }
 ): AsyncGenerator<StreamChunk> {
   const provider = LLMFactory.getProvider(model);
+
+  // Generate temporal context
+  let temporalContext = '';
+  try {
+    const context = generateTemporalContext(
+      conversationMetadata?.lastMessageTime,
+      conversationMetadata?.startTime
+    );
+    temporalContext = formatTemporalContextForPrompt(context);
+
+    log.info('Temporal context generated', {
+      userId,
+      timeOfDay: context.timeOfDay,
+      timeSinceLastMessage: context.timeSinceLastMessage?.category,
+    });
+  } catch (error) {
+    log.error('Failed to generate temporal context', {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+
+  // Retrieve relevant memories and entities (filtered more strictly)
+  let memoryContext = '';
+  try {
+    const memories = await retrieveRelevantMemories(userQuery, userId, {
+      topK: 3, // Reduced from 5 to prevent overuse
+      minSimilarity: 0.82, // Increased from 0.7 for better relevance
+    });
+
+    if (memories.length > 0) {
+      memoryContext = formatMemoriesForPrompt(memories);
+      log.info('Memories retrieved for context', {
+        userId,
+        count: memories.length,
+      });
+    }
+  } catch (error) {
+    log.error('Failed to retrieve memories', {
+      error: error instanceof Error ? error.message : String(error),
+      userId,
+    });
+  }
 
   // Build document list
   const documentList = documents
@@ -226,48 +246,72 @@ async function* synthesizeResponse(
     });
   }
 
-  // Build strict guidelines for RAG-only mode
+  // Build unified guidelines with executive assistant personality
   const strictMode = chatSettings?.ragOnlyMode;
-  const guidelines = strictMode
-    ? `**CRITICAL RULES (RAG-ONLY MODE ENABLED):**
-- You MUST ONLY use information from the retrieved context below
-- DO NOT use your general knowledge or training data AT ALL
-- DO NOT fabricate, infer, or extrapolate information not explicitly present in the context
-- If the retrieved context doesn't contain enough information to answer, say: "I don't have enough information in my documents to answer that question."
-- When listing items, ONLY list the EXACT items present in the retrieved data - no more, no less
-- COPY the exact data from the Results section - do not paraphrase, summarize, or invent similar items
-- Be conversational and friendly, but STRICTLY stay within the provided context
 
-**Example:**
-If Results shows: [{"title": "2024 Topps Chrome Card A", "price": 50}, {"title": "2022 Bowman Card B", "price": 10}]
-You MUST list exactly those 2 cards with those exact titles and prices.
-You MUST NOT list different cards or make up additional details.`
-    : `**Guidelines:**
-- Be conversational and friendly (like a helpful colleague)
-- Answer directly and concisely
-- Don't mention backend processes, agents, or technical details
-- Don't cite sources unless the user specifically asks (e.g., "where did you find that?", "what's your source?")
-- When asked for sources, clearly identify which documents you used:
-  * For text documents: mention the filename and page number if available
-  * For tabular documents: mention the CSV/Excel filename
-  * Be specific: "I found that in [filename]" or "That information comes from your [filename] document"
-- If you don't have enough information, say so briefly
-- Remember the conversation history - if asked about sources, refer to your previous answer
+  const systemPrompt = strictMode
+    ? `You are a long-time executive assistant helping your user with their documents and information. You're accurate, anticipatory, and direct — you solve problems without unnecessary pleasantries.
 
-**CRITICAL ANTI-HALLUCINATION RULES:**
-- When retrieved data IS provided below, you MUST use ONLY that data
-- DO NOT add details, examples, or information not present in the retrieved context
-- DO NOT fabricate similar items or make up plausible-sounding data
-- When listing items from retrieved data, list EXACTLY what's in the data - no more, no less
-- If the data seems incomplete or you want to add context from general knowledge, explicitly say "Based on the data I have..." to distinguish it
-- For factual queries about uploaded documents, stick to what's actually in the retrieved context`;
-
-  const systemPrompt = `You are a helpful, friendly AI assistant. You have access to the user's document library and can answer questions about their uploaded files.
+${temporalContext}
 
 **User's Documents:**
 ${documentList}
 
-${guidelines}
+${memoryContext}
+
+**Your Approach:**
+- Lead with the answer, not process details
+- Ask clarifying questions when requests are vague or ambiguous — don't rubber-stamp unclear ideas
+- Only use memories when directly relevant to the current task (don't force them into conversation)
+- Adapt your tone to the user's mood:
+  * Busy → lead with the answer
+  * Curious → provide context and depth
+  * Frustrated → simplify and solve
+- If you sense contradiction or confusion, ask before proceeding
+- Cite sources only when asked ("where did you find that?")
+
+**Challenging Exceptions (do NOT challenge these):**
+- Emotional processing or venting
+- Personal preferences ("I prefer X over Y")
+- Identity statements ("I am...", "I feel...")
+- Setting boundaries ("Don't do X")
+
+**STRICT DATA RULES (RAG-ONLY MODE):**
+You MUST only use information from the retrieved context below. If the data isn't there, say "Not seeing that in the documents" or "The documents don't have that information." Use EXACT data — don't paraphrase, invent, or add plausible details. You may interpret explicit data (e.g., calculate totals, compare values) but not fabricate new entries.
+
+Example: If Results shows 2 cards, list those 2 cards exactly — not 3, not similar ones, those 2.
+
+${retrievedContext}`
+    : `You are a long-time executive assistant helping your user with their documents and information. You're accurate, anticipatory, and direct — you solve problems without unnecessary pleasantries.
+
+${temporalContext}
+
+**User's Documents:**
+${documentList}
+
+${memoryContext}
+
+**Your Approach:**
+- Lead with the answer, not process details
+- Ask clarifying questions when requests are vague or ambiguous — don't rubber-stamp unclear ideas
+- Only use memories when directly relevant to the current task (don't force them into conversation)
+- Adapt your tone to the user's mood:
+  * Busy → lead with the answer
+  * Curious → provide context and depth
+  * Frustrated → simplify and solve, then ask clarifying questions
+- If you sense contradiction or confusion in the request, ask before proceeding
+- Cite sources only when asked ("where did you find that?", "what's your source?")
+- When memories contradict each other or seem outdated, acknowledge it and ask for clarification
+- Avoid restating information the user just told you — acknowledge and build on it instead
+
+**Challenging Exceptions (do NOT challenge these):**
+- Emotional processing or venting
+- Personal preferences ("I prefer X over Y")
+- Identity statements ("I am...", "I feel...")
+- Setting boundaries ("Don't do X")
+
+**Data Accuracy:**
+When retrieved data IS provided below, use ONLY that data. Don't fabricate, add plausible details, or invent similar items. List EXACTLY what's in the data. If you need to add general context, explicitly distinguish it: "Based on the data I have..."
 
 ${retrievedContext}`;
 
@@ -297,11 +341,27 @@ ${retrievedContext}`;
 export async function* handleUserQuery(
   userQuery: string,
   userId: string,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string }> = [],
   model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
   chatSettings?: ChatSettings
 ): AsyncGenerator<StreamChunk> {
+  // Extract temporal metadata from conversation history
+  const conversationMetadata: { startTime?: Date; lastMessageTime?: Date } = {};
+
+  if (conversationHistory.length > 0) {
+    // Get the first message time (conversation start)
+    const firstMessage = conversationHistory[0];
+    if (firstMessage.created_at) {
+      conversationMetadata.startTime = new Date(firstMessage.created_at);
+    }
+
+    // Get the last message time (excluding the current one being processed)
+    const lastMessage = conversationHistory[conversationHistory.length - 1];
+    if (lastMessage.created_at) {
+      conversationMetadata.lastMessageTime = new Date(lastMessage.created_at);
+    }
+  }
   try {
     log.info('🎯 MASTER AGENT START', { userId, query: userQuery.substring(0, 100), chatSettings });
 
@@ -515,13 +575,15 @@ export async function* handleUserQuery(
     log.info('Synthesizing response', { userId });
     yield* synthesizeResponse(
       userQuery,
+      userId,
       documents,
       ragContext,
       tabularData,
       conversationHistory,
       model,
       temperature,
-      chatSettings
+      chatSettings,
+      conversationMetadata
     );
 
     // Step 6: Yield metadata chunk at the end

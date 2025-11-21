@@ -12,6 +12,7 @@ import { calculateLLMCost, countTokens } from '../../lib/utils.js';
 import { log } from '../../lib/logger.js';
 import { BudgetExceededError } from '../../lib/errors.js';
 import { supabase } from '../../models/database.js';
+import { processMessage, shouldExtractFromMessage } from '../../services/memory/memoryExtractor.js';
 import type { ServerMessage } from '../types.js';
 
 interface ChatSettings {
@@ -122,19 +123,21 @@ export async function handleChatMessage(
       log.info('Budget warning sent to client', { userId, percentUsed: budgetWarning.percentUsed });
     }
 
-    // Save user message
-    await saveMessage({
-      conversation_id: conversationId,
-      user_id: userId,
-      role: 'user',
-      content,
-    });
+    // Parallelize: save message, get history (independent operations)
+    const [, history] = await Promise.all([
+      saveMessage({
+        conversation_id: conversationId,
+        user_id: userId,
+        role: 'user',
+        content,
+      }),
+      getRecentMessages(conversationId, 20),
+    ]);
 
-    // Get conversation history for context
-    const history = await getRecentMessages(conversationId, 20);
     const conversationHistory = history.map((msg) => ({
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
+      created_at: msg.created_at,
     }));
 
     // Route message to appropriate agent
@@ -285,6 +288,31 @@ export async function handleChatMessage(
       generateConversationTitle(conversationId, userId).catch((error) => {
         log.error('Failed to generate conversation title in background', {
           conversationId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      });
+    }
+
+    // Extract memories from user message (async, don't wait)
+    // Only extract from user messages that are substantial enough
+    if (shouldExtractFromMessage(content, 'user')) {
+      log.info('Extracting memories from message', { messageId, userId });
+
+      // Get recent conversation context for better extraction
+      const contextMessages = conversationHistory.slice(-6); // Last 3 exchanges
+      const contextText = contextMessages
+        .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
+        .join('\n\n');
+
+      processMessage(
+        messageId,
+        conversationId,
+        userId,
+        content,
+        contextText
+      ).catch((error) => {
+        log.error('Failed to extract memories in background', {
+          messageId,
           error: error instanceof Error ? error.message : String(error),
         });
       });
