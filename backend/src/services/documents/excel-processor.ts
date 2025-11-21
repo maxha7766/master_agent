@@ -239,7 +239,7 @@ export class ExcelDocumentProcessor {
       {
         ...doc.sourceMetadata,
         source_url: doc.url,
-      },
+      } as Partial<ExcelChunkMetadata>,
       {
         targetTokens,
         overlapTokens,
@@ -306,7 +306,7 @@ export class ExcelDocumentProcessor {
         processedChunks.push({
           content: enrichedChunks[i].content,
           embedding: embeddings[i],
-          metadata: enrichedChunks[i].metadata,
+          metadata: enrichedChunks[i].metadata as ExcelChunkMetadata,
           tokens: enrichedChunks[i].tokens,
         });
       }
@@ -320,7 +320,7 @@ export class ExcelDocumentProcessor {
         processedChunks.push({
           content: chunk.content,
           embedding: [],
-          metadata: chunk.metadata,
+          metadata: chunk.metadata as ExcelChunkMetadata,
           tokens: chunk.tokens,
         });
       }
