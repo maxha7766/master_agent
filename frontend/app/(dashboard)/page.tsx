@@ -84,8 +84,8 @@ export default function ChatPage() {
         />
       </aside>
 
-      {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+      {/* Main Chat Area - Full height with flex layout */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative h-full">
         {/* Settings Button - Fixed Position at top right of chat area */}
         <div className="absolute top-3 right-2 sm:right-4 z-50">
           <Button
@@ -113,16 +113,16 @@ export default function ChatPage() {
           </div>
         )}
 
-        {/* Messages - Scrollable Area */}
-        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6">
+        {/* Messages - Scrollable Area with proper mobile sizing */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 sm:px-4 md:px-6 py-4 sm:py-6 min-h-0">
           <MessageList messages={currentConversation.messages} />
           {streamingMessage && (
             <StreamingMessage message={streamingMessage} />
           )}
         </div>
 
-        {/* Input Container - Fixed at Bottom */}
-        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-2 sm:px-4 py-3 sm:py-4">
+        {/* Input Container - Fixed at Bottom with safe area for mobile keyboards */}
+        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-2 sm:px-4 py-2 sm:py-4 pb-safe">
           <div className="max-w-3xl mx-auto">
             <MessageInput
               onSend={handleSendMessage}
