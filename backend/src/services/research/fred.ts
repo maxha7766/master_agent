@@ -59,13 +59,13 @@ export class FREDService {
         throw new Error(`FRED API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (!data.seriess) {
         return [];
       }
 
-      const results: FREDSeriesInfo[] = data.seriess.map((series: any) => ({
+      const results: FREDSeriesInfo[] = (data.seriess as any[]).map((series: any) => ({
         id: series.id,
         title: series.title,
         notes: series.notes || '',
@@ -131,13 +131,13 @@ export class FREDService {
         throw new Error(`FRED API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (!data.observations) {
         return [];
       }
 
-      const observations: FREDObservation[] = data.observations.map((obs: any) => ({
+      const observations: FREDObservation[] = (data.observations as any[]).map((obs: any) => ({
         date: obs.date,
         value: obs.value,
       }));
@@ -174,13 +174,13 @@ export class FREDService {
         throw new Error(`FRED API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
-      if (!data.seriess || data.seriess.length === 0) {
+      if (!data.seriess || (data.seriess as any[]).length === 0) {
         return null;
       }
 
-      const series = data.seriess[0];
+      const series = (data.seriess as any[])[0];
 
       return {
         id: series.id,

@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Database, Search, Settings, BarChart3 } from 'lucide-react';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain } from 'lucide-react';
 import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
 import ResearchProgress from '../../components/research/ResearchProgress';
@@ -86,12 +86,12 @@ export default function DashboardLayout({
     <div className="h-screen bg-[#212121] flex flex-col overflow-hidden">
       {/* Top Navigation */}
       <header className="bg-[#171717] border-b border-gray-800 flex-shrink-0">
-        <div className="px-4">
+        <div className="px-2 sm:px-4">
           <div className="flex justify-between items-center h-12">
-            <div className="flex items-center space-x-8">
-              <h1 className="text-lg font-semibold text-white">Personal AI Assistant</h1>
+            <div className="flex items-center space-x-2 sm:space-x-8">
+              <h1 className="text-sm sm:text-lg font-semibold text-white">Personal AI Assistant</h1>
 
-              <nav className="flex items-center space-x-1">
+              <nav className="hidden md:flex items-center space-x-1">
                 <Link
                   href="/"
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
@@ -120,6 +120,13 @@ export default function DashboardLayout({
                   <Search className="w-4 h-4" />
                   <span>Research</span>
                 </button>
+                <Link
+                  href="/memories"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Brain className="w-4 h-4" />
+                  <span>Memories</span>
+                </Link>
                 <Link
                   href="/usage"
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
@@ -154,13 +161,13 @@ export default function DashboardLayout({
               </nav>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <span className="text-sm text-gray-400">{user.email}</span>
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <span className="hidden sm:inline text-sm text-gray-400">{user.email}</span>
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-gray-300 hover:text-white hover:bg-gray-800 text-sm"
+                className="text-gray-300 hover:text-white hover:bg-gray-800 text-xs sm:text-sm"
               >
                 Sign Out
               </Button>

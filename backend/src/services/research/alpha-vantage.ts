@@ -109,7 +109,7 @@ export class AlphaVantageService {
         throw new Error(`Alpha Vantage API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (data['Error Message']) {
         throw new Error(`Alpha Vantage error: ${data['Error Message']}`);
@@ -124,14 +124,14 @@ export class AlphaVantageService {
       }
 
       const result: CompanyOverview = {
-        symbol: data.Symbol,
-        name: data.Name,
-        description: data.Description || '',
-        sector: data.Sector || '',
-        industry: data.Industry || '',
-        marketCap: parseInt(data.MarketCapitalization) || 0,
-        peRatio: parseFloat(data.PERatio) || 0,
-        dividendYield: parseFloat(data.DividendYield) || 0,
+        symbol: data.Symbol as string,
+        name: data.Name as string,
+        description: (data.Description as string) || '',
+        sector: (data.Sector as string) || '',
+        industry: (data.Industry as string) || '',
+        marketCap: parseInt(data.MarketCapitalization as string) || 0,
+        peRatio: parseFloat(data.PERatio as string) || 0,
+        dividendYield: parseFloat(data.DividendYield as string) || 0,
       };
 
       log.info('Alpha Vantage company overview fetch successful', { symbol });
@@ -163,7 +163,7 @@ export class AlphaVantageService {
         throw new Error(`Alpha Vantage API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (data['Error Message']) {
         throw new Error(`Alpha Vantage error: ${data['Error Message']}`);
@@ -177,7 +177,7 @@ export class AlphaVantageService {
         return [];
       }
 
-      const results = data.bestMatches.map((match: any) => ({
+      const results = (data.bestMatches as any[]).map((match: any) => ({
         symbol: match['1. symbol'],
         name: match['2. name'],
         type: match['3. type'],

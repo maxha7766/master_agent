@@ -72,13 +72,13 @@ export class GuardianService {
         throw new Error(`Guardian API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (data.response?.status !== 'ok') {
         throw new Error(`Guardian API error: ${data.response?.message || 'Unknown error'}`);
       }
 
-      const results: GuardianResult[] = (data.response.results || []).map((item: any) => ({
+      const results: GuardianResult[] = ((data.response.results || []) as any[]).map((item: any) => ({
         title: item.webTitle,
         url: item.webUrl,
         snippet: item.fields?.trailText || '',
@@ -128,13 +128,13 @@ export class GuardianService {
         throw new Error(`Guardian API error: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (data.response?.status !== 'ok') {
         throw new Error(`Guardian API error: ${data.response?.message || 'Unknown error'}`);
       }
 
-      const results: GuardianResult[] = (data.response.results || []).map((item: any) => ({
+      const results: GuardianResult[] = ((data.response.results || []) as any[]).map((item: any) => ({
         title: item.webTitle,
         url: item.webUrl,
         snippet: item.fields?.trailText || '',

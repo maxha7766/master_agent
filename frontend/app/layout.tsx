@@ -16,6 +16,12 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Personal AI Assistant",
   description: "AI-powered research and conversation assistant with RAG capabilities",
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 1,
+  },
+  themeColor: '#000000',
 };
 
 export default function RootLayout({

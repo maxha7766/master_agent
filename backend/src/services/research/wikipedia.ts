@@ -34,13 +34,13 @@ export class WikipediaService {
         throw new Error(`Wikipedia API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (!data.query?.search) {
         return [];
       }
 
-      const results: WikipediaResult[] = data.query.search.map((item: any) => ({
+      const results: WikipediaResult[] = (data.query.search as any[]).map((item: any) => ({
         title: item.title,
         url: `https://en.wikipedia.org/wiki/${encodeURIComponent(item.title.replace(/ /g, '_'))}`,
         snippet: this.stripHtml(item.snippet),
@@ -83,7 +83,7 @@ export class WikipediaService {
         throw new Error(`Wikipedia API error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
       const pages = data.query?.pages;
 
       if (!pages) {

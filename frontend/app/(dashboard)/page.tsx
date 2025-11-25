@@ -76,8 +76,8 @@ export default function ChatPage() {
 
   return (
     <div className="flex h-full bg-[#212121] overflow-hidden">
-      {/* Conversation Sidebar */}
-      <aside className="w-64 flex-shrink-0 bg-[#171717] border-r border-gray-800 overflow-hidden">
+      {/* Conversation Sidebar - Hidden on mobile */}
+      <aside className="hidden md:block w-64 flex-shrink-0 bg-[#171717] border-r border-gray-800 overflow-hidden">
         <ConversationSidebar
           currentConversationId={currentConversation?.id}
           onNewConversation={handleNewConversation}
@@ -87,7 +87,7 @@ export default function ChatPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
         {/* Settings Button - Fixed Position at top right of chat area */}
-        <div className="absolute top-3 right-4 z-50">
+        <div className="absolute top-3 right-2 sm:right-4 z-50">
           <Button
             variant="ghost"
             size="icon"
@@ -101,20 +101,20 @@ export default function ChatPage() {
 
         {/* Connection Status */}
         {!wsConnected && (
-          <div className="bg-yellow-900/20 border border-yellow-700/50 text-yellow-400 px-4 py-3 mx-4 mt-4 mb-2 rounded-lg flex-shrink-0">
+          <div className="bg-yellow-900/20 border border-yellow-700/50 text-yellow-400 px-2 sm:px-4 py-3 mx-2 sm:mx-4 mt-4 mb-2 rounded-lg flex-shrink-0 text-sm">
             Connecting to server...
           </div>
         )}
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-900/20 border border-red-700/50 text-red-400 px-4 py-3 mx-4 mt-4 mb-2 rounded-lg flex-shrink-0">
+          <div className="bg-red-900/20 border border-red-700/50 text-red-400 px-2 sm:px-4 py-3 mx-2 sm:mx-4 mt-4 mb-2 rounded-lg flex-shrink-0 text-sm">
             {error}
           </div>
         )}
 
         {/* Messages - Scrollable Area */}
-        <div className="flex-1 overflow-y-auto px-4 py-6">
+        <div className="flex-1 overflow-y-auto px-2 sm:px-4 md:px-6 py-4 sm:py-6">
           <MessageList messages={currentConversation.messages} />
           {streamingMessage && (
             <StreamingMessage message={streamingMessage} />
@@ -122,7 +122,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input Container - Fixed at Bottom */}
-        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-4 py-4">
+        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-2 sm:px-4 py-3 sm:py-4">
           <div className="max-w-3xl mx-auto">
             <MessageInput
               onSend={handleSendMessage}

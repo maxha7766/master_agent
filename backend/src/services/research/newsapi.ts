@@ -69,17 +69,17 @@ export class NewsAPIService {
       const response = await fetch(`${this.baseUrl}/everything?${params}`);
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as any;
         throw new Error(`NewsAPI error: ${error.message || response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (data.status !== 'ok') {
         throw new Error(`NewsAPI error: ${data.message || 'Unknown error'}`);
       }
 
-      const results: NewsAPIResult[] = (data.articles || []).map((article: any) => ({
+      const results: NewsAPIResult[] = ((data.articles || []) as any[]).map((article: any) => ({
         title: article.title || 'No title',
         description: article.description || '',
         url: article.url,
@@ -132,17 +132,17 @@ export class NewsAPIService {
       const response = await fetch(`${this.baseUrl}/top-headlines?${params}`);
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json() as any;
         throw new Error(`NewsAPI error: ${error.message || response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       if (data.status !== 'ok') {
         throw new Error(`NewsAPI error: ${data.message || 'Unknown error'}`);
       }
 
-      const results: NewsAPIResult[] = (data.articles || []).map((article: any) => ({
+      const results: NewsAPIResult[] = ((data.articles || []) as any[]).map((article: any) => ({
         title: article.title || 'No title',
         description: article.description || '',
         url: article.url,
