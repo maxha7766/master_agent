@@ -167,6 +167,16 @@ export function calculateLLMCost(
     // Embeddings
     'text-embedding-3-large': { input: 0.00013, output: 0 },
     'text-embedding-3-small': { input: 0.00002, output: 0 },
+
+    // Gemini Models (prices per 1M tokens converted to per 1K)
+    'gemini-3.0-flash-thinking-exp': { input: 0, output: 0 }, // Free during preview
+    'gemini-3.0-flash-thinking-exp-1219': { input: 0, output: 0 }, // Free during preview
+    'gemini-2.0-flash-exp': { input: 0, output: 0 }, // Free during preview
+    'gemini-exp-1206': { input: 0, output: 0 }, // Free during preview
+    'gemini-2.0-flash-thinking-exp': { input: 0, output: 0 }, // Free during preview
+    'gemini-2.0-flash-thinking-exp-1219': { input: 0, output: 0 }, // Free during preview
+    'gemini-1.5-pro': { input: 0.00125, output: 0.005 }, // $1.25/$5 per 1M
+    'gemini-1.5-flash': { input: 0.000075, output: 0.0003 }, // $0.075/$0.30 per 1M
   };
 
   const modelPricing = pricing[model] || pricing['gpt-4']; // Default to GPT-4 if unknown

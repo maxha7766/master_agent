@@ -1,6 +1,7 @@
 import type { LLMProvider } from './provider.js';
 import { OpenAIProvider } from './openai.js';
 import { AnthropicProvider } from './anthropic.js';
+import { GeminiProvider } from './gemini.js';
 
 /**
  * LLM Provider Factory
@@ -9,6 +10,7 @@ import { AnthropicProvider } from './anthropic.js';
 export class LLMFactory {
   private static openaiProvider: OpenAIProvider | null = null;
   private static anthropicProvider: AnthropicProvider | null = null;
+  private static geminiProvider: GeminiProvider | null = null;
 
   /**
    * Get the appropriate LLM provider for a given model
@@ -28,6 +30,13 @@ export class LLMFactory {
       return this.anthropicProvider;
     }
 
+    if (model.startsWith('gemini-')) {
+      if (!this.geminiProvider) {
+        this.geminiProvider = new GeminiProvider();
+      }
+      return this.geminiProvider;
+    }
+
     // Default to OpenAI for unknown models
     if (!this.openaiProvider) {
       this.openaiProvider = new OpenAIProvider();
@@ -41,10 +50,12 @@ export class LLMFactory {
   static isModelSupported(model: string): boolean {
     const openai = new OpenAIProvider();
     const anthropic = new AnthropicProvider();
+    const gemini = new GeminiProvider();
 
     return (
       openai.getSupportedModels().includes(model) ||
-      anthropic.getSupportedModels().includes(model)
+      anthropic.getSupportedModels().includes(model) ||
+      gemini.getSupportedModels().includes(model)
     );
   }
 
@@ -54,8 +65,13 @@ export class LLMFactory {
   static getAllSupportedModels(): string[] {
     const openai = new OpenAIProvider();
     const anthropic = new AnthropicProvider();
+    const gemini = new GeminiProvider();
 
-    return [...openai.getSupportedModels(), ...anthropic.getSupportedModels()];
+    return [
+      ...openai.getSupportedModels(),
+      ...anthropic.getSupportedModels(),
+      ...gemini.getSupportedModels(),
+    ];
   }
 
   /**
@@ -64,5 +80,6 @@ export class LLMFactory {
   static resetProviders(): void {
     this.openaiProvider = null;
     this.anthropicProvider = null;
+    this.geminiProvider = null;
   }
 }
