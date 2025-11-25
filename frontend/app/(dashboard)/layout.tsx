@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain } from 'lucide-react';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X } from 'lucide-react';
 import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
 import ResearchProgress from '../../components/research/ResearchProgress';
@@ -27,6 +27,7 @@ export default function DashboardLayout({
   const [knowledgeDialogOpen, setKnowledgeDialogOpen] = useState(false);
   const [researchOpen, setResearchOpen] = useState(false);
   const [activeResearchId, setActiveResearchId] = useState<string | null>(null);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Connect to WebSocket once at layout level
   useEffect(() => {
@@ -91,6 +92,7 @@ export default function DashboardLayout({
             <div className="flex items-center space-x-2 sm:space-x-8">
               <h1 className="text-sm sm:text-lg font-semibold text-white">Personal AI Assistant</h1>
 
+              {/* Desktop Navigation - Hidden on mobile */}
               <nav className="hidden md:flex items-center space-x-1">
                 <Link
                   href="/"
@@ -163,18 +165,149 @@ export default function DashboardLayout({
 
             <div className="flex items-center space-x-2 sm:space-x-4">
               <span className="hidden sm:inline text-sm text-gray-400">{user.email}</span>
+
+              {/* Desktop Sign Out - Hidden on mobile */}
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleSignOut}
-                className="text-gray-300 hover:text-white hover:bg-gray-800 text-xs sm:text-sm"
+                className="hidden md:block text-gray-300 hover:text-white hover:bg-gray-800 text-xs sm:text-sm"
               >
                 Sign Out
+              </Button>
+
+              {/* Mobile Hamburger Menu Button */}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden text-gray-300 hover:text-white hover:bg-gray-800 p-2"
+              >
+                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
               </Button>
             </div>
           </div>
         </div>
       </header>
+
+      {/* Mobile Menu Overlay */}
+      {mobileMenuOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Menu Drawer */}
+      <div
+        className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#171717] z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
+          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="h-full flex flex-col">
+          {/* Menu Header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+            <h2 className="text-lg font-semibold text-white">Menu</h2>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-gray-300 hover:text-white p-2"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+          </div>
+
+          {/* Navigation Section */}
+          <div className="p-4 border-b border-gray-800">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">Navigation</h3>
+            <nav className="space-y-1">
+              <Link
+                href="/"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Chat</span>
+              </Link>
+              <button
+                onClick={() => {
+                  setKnowledgeDialogOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <FileText className="w-5 h-5" />
+                <span>Knowledge</span>
+              </button>
+              <Link
+                href="/databases"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <Database className="w-5 h-5" />
+                <span>Databases</span>
+              </Link>
+              <button
+                onClick={() => {
+                  setResearchOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <Search className="w-5 h-5" />
+                <span>Research</span>
+              </button>
+              <Link
+                href="/memories"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <Brain className="w-5 h-5" />
+                <span>Memories</span>
+              </Link>
+              <Link
+                href="/usage"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <BarChart3 className="w-5 h-5" />
+                <span>Usage</span>
+              </Link>
+              <Link
+                href="/settings"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <Settings className="w-5 h-5" />
+                <span>Settings</span>
+              </Link>
+            </nav>
+          </div>
+
+          {/* Conversations Section - Scrollable */}
+          <div className="flex-1 overflow-y-auto p-4">
+            <h3 className="text-xs font-semibold text-gray-400 uppercase mb-2">Conversations</h3>
+            {/* ConversationSidebar content will be moved here */}
+            <p className="text-sm text-gray-500">Conversation history will appear here</p>
+          </div>
+
+          {/* Bottom Section - User Info & Sign Out */}
+          <div className="p-4 border-t border-gray-800">
+            <div className="text-sm text-gray-400 mb-2">{user.email}</div>
+            <Button
+              variant="outline"
+              className="w-full"
+              onClick={() => {
+                setMobileMenuOpen(false);
+                handleSignOut();
+              }}
+            >
+              Sign Out
+            </Button>
+          </div>
+        </div>
+      </div>
 
       {/* Main Content - Full Height */}
       <main className="flex-1 overflow-hidden min-h-0">
