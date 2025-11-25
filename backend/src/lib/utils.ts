@@ -146,28 +146,23 @@ export function calculateLLMCost(
   const pricing: Record<string, { input: number; output: number }> = {
     // Claude Models (prices per 1M tokens converted to per 1K)
     'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015 }, // $3/$15 per 1M
-    'claude-sonnet-4-5': { input: 0.003, output: 0.015 },
-    'claude-sonnet-4-5-20250929': { input: 0.003, output: 0.015 },
-    'claude-3-5-sonnet-20241022': { input: 0.003, output: 0.015 },
-    'claude-haiku': { input: 0.00025, output: 0.00125 },
-    'claude-3-haiku-20240307': { input: 0.00025, output: 0.00125 },
-    'claude-3-opus-20240229': { input: 0.015, output: 0.075 },
+    'claude-3-haiku-20240307': { input: 0.00025, output: 0.00125 }, // $0.25/$1.25 per 1M
 
     // GPT-5 Series (prices per 1M tokens converted to per 1K)
-    'gpt-5.1': { input: 0.00125, output: 0.01 }, // $1.25/$10 per 1M
-    'gpt-5.1-chat-latest': { input: 0.00125, output: 0.01 },
-    'gpt-5.1-codex': { input: 0.00125, output: 0.01 },
-    'gpt-5.1-codex-mini': { input: 0.0005, output: 0.004 }, // Estimated cheaper
-    'gpt-5': { input: 0.00125, output: 0.01 },
-    'gpt-5-mini': { input: 0.0005, output: 0.004 }, // Estimated cheaper
-    'gpt-5-nano': { input: 0.0002, output: 0.0015 }, // Estimated cheapest
+    'gpt-5.1': { input: 0.00125, output: 0.01 }, // $1.25/$10 per 1M (estimated)
+    'gpt-5': { input: 0.00125, output: 0.01 }, // $1.25/$10 per 1M (estimated)
+    'gpt-5-mini': { input: 0.0005, output: 0.004 }, // $0.50/$4 per 1M (estimated)
+    'gpt-5-nano': { input: 0.0002, output: 0.0015 }, // $0.20/$1.50 per 1M (estimated)
 
-    // GPT-4 Series (Legacy)
-    'gpt-4': { input: 0.03, output: 0.06 },
-    'gpt-4-turbo': { input: 0.01, output: 0.03 },
-    'gpt-4-turbo-preview': { input: 0.01, output: 0.03 },
-    'gpt-3.5-turbo': { input: 0.0015, output: 0.002 },
-    'gpt-3.5-turbo-16k': { input: 0.003, output: 0.004 },
+    // GPT-4 Series (prices per 1M tokens converted to per 1K)
+    'gpt-4o': { input: 0.0025, output: 0.01 }, // $2.50/$10 per 1M
+    'gpt-4o-mini': { input: 0.00015, output: 0.0006 }, // $0.15/$0.60 per 1M
+    'gpt-4-turbo': { input: 0.01, output: 0.03 }, // $10/$30 per 1M
+    'gpt-4': { input: 0.03, output: 0.06 }, // $30/$60 per 1M
+    'gpt-3.5-turbo': { input: 0.0005, output: 0.0015 }, // $0.50/$1.50 per 1M
+
+    // Reasoning Models (prices per 1M tokens converted to per 1K)
+    'o1': { input: 0.015, output: 0.06 }, // $15/$60 per 1M
 
     // Embeddings
     'text-embedding-3-large': { input: 0.00013, output: 0 },
