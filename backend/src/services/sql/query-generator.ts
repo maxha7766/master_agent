@@ -76,8 +76,8 @@ class QueryGeneratorService {
     dbType: DatabaseType,
     options: QueryGenerationOptions
   ): Promise<QueryGenerationResult> {
-    // Use GPT-5.1 Codex - optimized for SQL and 60% cheaper than Claude
-    const provider = LLMFactory.getProvider('gpt-5.1-codex');
+    // Use GPT-4o - supports custom temperature for SQL consistency
+    const provider = LLMFactory.getProvider('gpt-4o');
 
     // Build schema description
     const schemaDescription = this.formatSchemaForPrompt(schema);
@@ -88,7 +88,7 @@ class QueryGeneratorService {
     // Call LLM
     const response = await provider.chat(
       [{ role: 'user', content: prompt }],
-      'gpt-5.1-codex',
+      'gpt-4o',
       {
         temperature: 0.1, // Low temperature for consistency
         maxTokens: 2000,
@@ -285,7 +285,7 @@ Respond with ONLY the JSON object, no additional text.`;
    */
   async explainQuery(sql: string, dbType: DatabaseType): Promise<string> {
     try {
-      const provider = LLMFactory.getProvider('gpt-5.1-codex');
+      const provider = LLMFactory.getProvider('gpt-4o');
 
       const prompt = `You are an expert SQL analyst. Explain the following ${dbType} query in simple terms.
 
@@ -301,7 +301,7 @@ Keep the explanation brief and understandable to non-technical users.`;
 
       const response = await provider.chat(
         [{ role: 'user', content: prompt }],
-        'gpt-5.1-codex',
+        'gpt-4o',
         { temperature: 0.3, maxTokens: 500 }
       );
 

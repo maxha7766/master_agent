@@ -402,7 +402,7 @@ class SchemaDiscoveryService {
    */
   private async generateSchemaSummary(schema: DatabaseSchema): Promise<string> {
     try {
-      const provider = LLMFactory.getProvider('gpt-5.1-codex');
+      const provider = LLMFactory.getProvider('gpt-4o');
 
       const schemaDescription = schema.tables.map(table => {
         const columnList = table.columns.map(col =>
@@ -420,7 +420,7 @@ Provide only the summary, no preamble.`;
 
       const response = await provider.chat(
         [{ role: 'user', content: prompt }],
-        'gpt-5.1-codex',
+        'gpt-4o',
         { temperature: 0.3, maxTokens: 200 }
       );
 

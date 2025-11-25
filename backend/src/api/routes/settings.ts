@@ -30,7 +30,7 @@ router.get('/', async (req: AuthRequest, res) => {
     if (error) {
       // If no settings exist, create default settings
       if (error.code === 'PGRST116') {
-        const { data: newSettings, error: createError } = await supabase
+        const { data: newSettings, error: createError} = await supabase
           .from('user_settings')
           .insert({
             user_id: userId,
@@ -99,25 +99,24 @@ router.put('/', async (req: AuthRequest, res) => {
       }
     }
 
-    // Validate model names
+    // Validate model names (API Available Only - Tested and Working)
     const validModels = [
       // Claude Models
-      'claude-sonnet-4-5-20250929', // Claude Sonnet 4.5 (latest)
-      'claude-sonnet-4-5-20250929', // Claude Sonnet 4
-      'claude-3-5-sonnet-20241022', // Claude 3.5 Sonnet
-      'claude-haiku', // Claude Haiku (fast/cheap)
+      'claude-sonnet-4-5-20250929',
+      'claude-3-haiku-20240307',
       // GPT-5 Series
-      'gpt-5.1', // GPT-5.1 (latest)
-      'gpt-5.1-chat-latest', // GPT-5.1 conversational
-      'gpt-5.1-codex', // GPT-5.1 coding-optimized
-      'gpt-5.1-codex-mini', // GPT-5.1 coding (smaller)
-      'gpt-5', // GPT-5 base
-      'gpt-5-mini', // GPT-5 (smaller)
-      'gpt-5-nano', // GPT-5 (smallest)
-      // GPT-4 Series (legacy)
-      'gpt-4',
+      'gpt-5.1',
+      'gpt-5',
+      'gpt-5-mini',
+      'gpt-5-nano',
+      // GPT-4 Series
+      'gpt-4o',
+      'gpt-4o-mini',
       'gpt-4-turbo',
+      'gpt-4',
       'gpt-3.5-turbo',
+      // Reasoning Models
+      'o1',
     ];
 
     for (const field of ['default_chat_model', 'rag_model', 'sql_model', 'research_model']) {

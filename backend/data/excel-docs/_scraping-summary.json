@@ -1,0 +1,79 @@
+{
+  "scrapedAt": "2025-11-21T03:49:42.240Z",
+  "totalSources": 6,
+  "successfulSources": 6,
+  "failedSources": 0,
+  "totalDocuments": 10,
+  "documents": [
+    {
+      "title": "Excel functions (alphabetical) - Microsoft Support",
+      "url": "https://support.microsoft.com/en-us/office/excel-functions-alphabetical-b3944572-255d-4efb-bb96-c6d90033e188",
+      "contentLength": 112920,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    },
+    {
+      "title": "Information functions",
+      "url": "https://support.microsoft.com/en-us/office/excel-functions-by-category-5f91f4e9-7b42-46d2-9bd1-63f26a86c0eb",
+      "contentLength": 3681,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    },
+    {
+      "title": "Logical functions",
+      "url": "https://support.microsoft.com/en-us/office/excel-functions-by-category-5f91f4e9-7b42-46d2-9bd1-63f26a86c0eb",
+      "contentLength": 3816,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    },
+    {
+      "title": "Lookup and reference functions",
+      "url": "https://support.microsoft.com/en-us/office/excel-functions-by-category-5f91f4e9-7b42-46d2-9bd1-63f26a86c0eb",
+      "contentLength": 7421,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    },
+    {
+      "title": "Math and trigonometry functions",
+      "url": "https://support.microsoft.com/en-us/office/excel-functions-by-category-5f91f4e9-7b42-46d2-9bd1-63f26a86c0eb",
+      "contentLength": 13890,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    },
+    {
+      "title": "Statistical functions",
+      "url": "https://support.microsoft.com/en-us/office/excel-functions-by-category-5f91f4e9-7b42-46d2-9bd1-63f26a86c0eb",
+      "contentLength": 21181,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    },
+    {
+      "title": "Overview of formulas in Excel - Microsoft Support",
+      "url": "https://support.microsoft.com/en-us/office/overview-of-formulas-in-excel-ecfdc708-9162-49e8-b993-c311f47ca173",
+      "contentLength": 18597,
+      "sourceType": "microsoft_docs",
+      "category": "conceptual"
+    },
+    {
+      "title": "Excel help & learning",
+      "url": "https://support.microsoft.com/en-us/excel",
+      "contentLength": 5493,
+      "sourceType": "microsoft_docs",
+      "category": "tutorials"
+    },
+    {
+      "title": "10 Advanced Excel Formulas and Functions You Must Know",
+      "url": "https://corporatefinanceinstitute.com/resources/excel/study/advanced-excel-formulas-must-know/",
+      "contentLength": 28911,
+      "sourceType": "third_party",
+      "category": "advanced_techniques"
+    },
+    {
+      "title": "Text functions (reference) - Microsoft Support",
+      "url": "https://support.microsoft.com/en-us/office/text-functions-reference-cccd86ad-547d-4ea9-a065-7bb697c2a56e",
+      "contentLength": 12168,
+      "sourceType": "microsoft_docs",
+      "category": "reference"
+    }
+  ]
+}

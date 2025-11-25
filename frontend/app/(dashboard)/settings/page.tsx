@@ -14,25 +14,25 @@ import { Label } from '../../../components/ui/label';
 import { toast } from 'sonner';
 
 const AVAILABLE_MODELS = [
-  // Claude Models
+  // Claude Models (API Available)
   { value: 'claude-sonnet-4-5-20250929', label: 'Claude Sonnet 4.5 (Latest - Best for Coding)' },
-  { value: 'claude-sonnet-4-20250514', label: 'Claude Sonnet 4' },
-  { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet' },
-  { value: 'claude-haiku', label: 'Claude Haiku (Fast & Cheap)' },
+  { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Fast & Cheap)' },
 
-  // GPT-5 Series
-  { value: 'gpt-5.1', label: 'GPT-5.1 (Latest - Adaptive Reasoning)' },
-  { value: 'gpt-5.1-chat-latest', label: 'GPT-5.1 Chat (Most Conversational)' },
-  { value: 'gpt-5.1-codex', label: 'GPT-5.1 Codex (Best for Coding)' },
-  { value: 'gpt-5.1-codex-mini', label: 'GPT-5.1 Codex Mini (Coding - Cheaper)' },
-  { value: 'gpt-5', label: 'GPT-5 (Base Model)' },
-  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Balanced)' },
-  { value: 'gpt-5-nano', label: 'GPT-5 Nano (Fastest & Cheapest)' },
+  // GPT-5 Series (Latest - Reasoning Models)
+  { value: 'gpt-5.1', label: 'GPT-5.1 (Latest Flagship)' },
+  { value: 'gpt-5', label: 'GPT-5' },
+  { value: 'gpt-5-mini', label: 'GPT-5 Mini (Cost-Optimized)' },
+  { value: 'gpt-5-nano', label: 'GPT-5 Nano (High-Throughput)' },
 
-  // GPT-4 Series (Legacy)
-  { value: 'gpt-4', label: 'GPT-4 (Legacy)' },
-  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo (Legacy)' },
-  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Legacy)' },
+  // GPT-4 Series
+  { value: 'gpt-4o', label: 'GPT-4o' },
+  { value: 'gpt-4o-mini', label: 'GPT-4o Mini' },
+  { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+  { value: 'gpt-4', label: 'GPT-4' },
+  { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo' },
+
+  // Reasoning Models
+  { value: 'o1', label: 'o1 (Reasoning)' },
 ];
 
 export default function SettingsPage() {
@@ -115,9 +115,18 @@ export default function SettingsPage() {
   return (
     <div className="h-full bg-[#212121] overflow-y-auto">
       <div className="max-w-4xl mx-auto px-6 py-8">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-white mb-2">Settings</h1>
-          <p className="text-gray-400">Manage your AI assistant preferences and budget</p>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-white mb-2">Settings</h1>
+            <p className="text-gray-400">Manage your AI assistant preferences and budget</p>
+          </div>
+          <Button
+            onClick={handleSave}
+            disabled={saving}
+            className="bg-gray-600 hover:bg-gray-700 text-white"
+          >
+            {saving ? 'Saving...' : 'Save Settings'}
+          </Button>
         </div>
 
         <div className="space-y-6">
@@ -263,17 +272,6 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
-
-          {/* Save Button */}
-          <div className="flex justify-end">
-            <Button
-              onClick={handleSave}
-              disabled={saving}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {saving ? 'Saving...' : 'Save Settings'}
-            </Button>
-          </div>
         </div>
       </div>
     </div>

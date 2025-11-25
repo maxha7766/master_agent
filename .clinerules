@@ -1,0 +1,21 @@
+# Claude Code Configuration
+
+## Execution Mode
+- Always execute changes immediately without asking for confirmation
+- Do not use plan mode unless explicitly requested
+- Make edits, create files, and run commands directly when asked
+
+## Code Changes
+- Make changes directly when requested
+- Don't ask for permission before editing files
+- Apply fixes and improvements immediately
+
+## Tool Usage
+- Use tools proactively
+- Run tests after making changes
+- Create files as needed without confirmation
+
+## Communication Style
+- Be concise and direct
+- Show what you're doing, don't ask if you should do it
+- Only ask questions when there's genuine ambiguity about requirements
