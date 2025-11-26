@@ -565,8 +565,15 @@ export async function* handleUserQuery(
         return;
       }
 
-      // Otherwise, use general knowledge
-      const systemPrompt = `You are a helpful, friendly AI assistant. The user hasn't uploaded any documents yet. Be conversational and brief.`;
+      // Otherwise, use general knowledge with time awareness
+      const temporalContext = generateTemporalContext();
+      const timeContext = formatTemporalContextForPrompt(temporalContext);
+
+      const systemPrompt = `You are a helpful, friendly AI assistant. The user hasn't uploaded any documents yet. Be conversational and brief.
+
+${timeContext}
+
+When asked about the current time or date, use the Current Time shown above. Always provide the time in a natural, conversational way.`;
 
       const messages: Array<{ role: 'user' | 'assistant' | 'system'; content: string }> = [
         { role: 'system', content: systemPrompt },

@@ -3,6 +3,9 @@
  * Provides time awareness and context for the AI agent
  */
 
+// Default timezone - can be made configurable per user later
+const DEFAULT_TIMEZONE = 'America/Chicago';
+
 export interface TimeGap {
   minutes: number;
   hours: number;
@@ -72,10 +75,33 @@ export function calculateTimeGap(earlierDate: Date, laterDate: Date): TimeGap {
 }
 
 /**
- * Get time of day category
+ * Get hours in user's timezone
  */
-export function getTimeOfDay(date: Date): TemporalContext['timeOfDay'] {
-  const hour = date.getHours();
+function getHoursInTimezone(date: Date, timezone: string = DEFAULT_TIMEZONE): number {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    hour: 'numeric',
+    hour12: false,
+    timeZone: timezone,
+  });
+  return parseInt(formatter.format(date), 10);
+}
+
+/**
+ * Get day of week in user's timezone
+ */
+function getDayOfWeekInTimezone(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    weekday: 'long',
+    timeZone: timezone,
+  });
+  return formatter.format(date);
+}
+
+/**
+ * Get time of day category (timezone-aware)
+ */
+export function getTimeOfDay(date: Date, timezone: string = DEFAULT_TIMEZONE): TemporalContext['timeOfDay'] {
+  const hour = getHoursInTimezone(date, timezone);
 
   if (hour >= 4 && hour < 7) return 'early_morning';
   if (hour >= 7 && hour < 12) return 'morning';
@@ -86,17 +112,16 @@ export function getTimeOfDay(date: Date): TemporalContext['timeOfDay'] {
 }
 
 /**
- * Get day of week
+ * Get day of week (timezone-aware)
  */
-export function getDayOfWeek(date: Date): string {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  return days[date.getDay()];
+export function getDayOfWeek(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
+  return getDayOfWeekInTimezone(date, timezone);
 }
 
 /**
- * Format date for display
+ * Format date for display in user's timezone
  */
-export function formatDateTime(date: Date): string {
+export function formatDateTime(date: Date, timezone: string = DEFAULT_TIMEZONE): string {
   return date.toLocaleString('en-US', {
     weekday: 'long',
     year: 'numeric',
@@ -105,7 +130,28 @@ export function formatDateTime(date: Date): string {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+    timeZone: timezone,
+  }) + ' Central';
+}
+
+/**
+ * Get contextual session description
+ */
+function getSessionContext(
+  timeOfDay: TemporalContext['timeOfDay'],
+  dayOfWeek: string
+): string {
+  const isWeekend = dayOfWeek === 'Saturday' || dayOfWeek === 'Sunday';
+  const timeContexts: Record<TemporalContext['timeOfDay'], string> = {
+    early_morning: isWeekend ? 'early weekend morning' : 'early morning (work day)',
+    morning: isWeekend ? 'weekend morning' : 'morning (work hours)',
+    afternoon: isWeekend ? 'weekend afternoon' : 'afternoon (work hours)',
+    evening: 'evening',
+    night: 'night',
+    late_night: 'late night',
+  };
+
+  return timeContexts[timeOfDay];
 }
 
 /**
@@ -141,26 +187,6 @@ export function generateTemporalContext(
   }
 
   return context;
-}
-
-/**
- * Get contextual session description
- */
-function getSessionContext(
-  timeOfDay: TemporalContext['timeOfDay'],
-  dayOfWeek: string
-): string {
-  const isWeekend = dayOfWeek === 'Saturday' || dayOfWeek === 'Sunday';
-  const timeContexts: Record<TemporalContext['timeOfDay'], string> = {
-    early_morning: isWeekend ? 'early weekend morning' : 'early morning (work day)',
-    morning: isWeekend ? 'weekend morning' : 'morning (work hours)',
-    afternoon: isWeekend ? 'weekend afternoon' : 'afternoon (work hours)',
-    evening: 'evening',
-    night: 'night',
-    late_night: 'late night',
-  };
-
-  return timeContexts[timeOfDay];
 }
 
 /**
