@@ -68,7 +68,7 @@ function detectImageIntent(userQuery: string): {
   const query = userQuery.toLowerCase();
 
   // Text-to-image patterns
-  const textToImageKeywords = /\b(create|generate|make|draw|produce|design|build|show\s+me|visualize|imagine|picture\s+of)\s+(an?|and|some|the)?\s*(image|picture|photo|illustration|artwork|visual|graphic|diagram)/i;
+  const textToImageKeywords = /\b(create|generate|make|draw|produce|design|build|show\s+me|visualize|imagine|picture\s+of|give\s+me\s+(a|an)|get\s+me\s+(a|an)|want\s+(a|an))\s+(an?|and|some|the)?\s*(image|picture|photo|illustration|artwork|visual|graphic|diagram)/i;
   const textToImageImplicit = /\b(create|generate|make|draw)\s+(?!.*\b(?:from|based on|using)\b.*\b(?:image|picture|photo)\b)/i;
 
   // Image editing patterns
