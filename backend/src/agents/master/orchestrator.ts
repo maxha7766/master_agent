@@ -467,13 +467,25 @@ export async function* handleUserQuery(
         }
       }
 
+      // For image editing, use low strength to preserve original and enhance prompt
+      let editPrompt = userQuery;
+      let editStrength = 0.8; // Default for text-to-image
+
+      if (sourceImage && imageIntent.operation === 'image-to-image') {
+        // Use lower strength for targeted edits to preserve most of the original
+        editStrength = 0.35;
+        // Enhance the prompt to be more specific about preserving the original
+        editPrompt = `${userQuery}. Keep the rest of the image exactly the same, only change what was requested.`;
+      }
+
       // Execute image generation
       const imageResult = await executeImageGenerationTool(
         {
           operation: imageIntent.operation!,
-          prompt: userQuery,
+          prompt: editPrompt,
           sourceImage, // Pass the source image for editing operations
-          creativityMode: 'balanced',
+          strength: editStrength, // Lower strength for edits
+          creativityMode: 'precise', // Use precise mode for edits to follow prompt closely
         },
         userId,
         conversationHistory[0]?.['conversationId'] // Get conversationId if available
