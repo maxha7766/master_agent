@@ -27,10 +27,14 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Debug: log render state
+  console.log('[MessageInput] Render - attachedImage:', attachedImage, 'uploading:', uploading);
+
   const handleSend = () => {
     const trimmed = message.trim();
     if (!trimmed || disabled) return;
 
+    console.log('[MessageInput] Sending message with attachedImageUrl:', attachedImage?.url);
     onSend(trimmed, attachedImage?.url);
     setMessage('');
     setAttachedImage(null);
@@ -59,6 +63,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    console.log('[MessageInput] File selected:', file?.name, file?.type, file?.size);
     if (!file) return;
 
     if (!file.type.startsWith('image/')) {
@@ -72,30 +77,41 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     }
 
     setUploading(true);
+    console.log('[MessageInput] Starting upload to:', `${process.env.NEXT_PUBLIC_API_URL}/api/images/upload`);
     try {
       const formData = new FormData();
       formData.append('image', file);
 
+      const token = localStorage.getItem('token');
+      console.log('[MessageInput] Auth token present:', !!token);
+
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/images/upload`, {
         method: 'POST',
         headers: {
-          Authorization: `Bearer ${localStorage.getItem('token')}`,
+          Authorization: `Bearer ${token}`,
         },
         body: formData,
       });
 
+      console.log('[MessageInput] Upload response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Upload failed');
+        const errorText = await response.text();
+        console.error('[MessageInput] Upload failed:', response.status, errorText);
+        throw new Error(`Upload failed: ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('[MessageInput] Upload success, URL:', data.url);
+
       setAttachedImage({
         url: data.url,
         filename: file.name,
       });
+      console.log('[MessageInput] State updated with attached image');
       toast.success('Image attached');
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('[MessageInput] Upload error:', error);
       toast.error('Failed to upload image');
     } finally {
       setUploading(false);
