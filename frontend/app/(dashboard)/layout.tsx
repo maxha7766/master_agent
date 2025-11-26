@@ -11,9 +11,10 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X } from 'lucide-react';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon } from 'lucide-react';
 import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
+import { ImageGenerationDialog, type ImageGenerationParams } from '../../components/images/ImageGenerationDialog';
 import ResearchProgress from '../../components/research/ResearchProgress';
 import { toast } from 'sonner';
 
@@ -28,6 +29,22 @@ export default function DashboardLayout({
   const [researchOpen, setResearchOpen] = useState(false);
   const [activeResearchId, setActiveResearchId] = useState<string | null>(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+
+  // Handle image generation from header dialog
+  const handleGenerateImage = (params: ImageGenerationParams) => {
+    if (!wsClient.isConnected()) {
+      toast.error('Not connected to server');
+      return;
+    }
+
+    wsClient.send({
+      kind: 'image_generate',
+      parameters: params,
+    });
+
+    toast.success('Image generation started...');
+  };
 
   // Connect to WebSocket once at layout level
   useEffect(() => {
@@ -136,6 +153,13 @@ export default function DashboardLayout({
                   <BarChart3 className="w-4 h-4" />
                   <span>Usage</span>
                 </Link>
+                <button
+                  onClick={() => setImageDialogOpen(true)}
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  <span>Image</span>
+                </button>
                 <Link
                   href="/settings"
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
@@ -274,6 +298,16 @@ export default function DashboardLayout({
                 <BarChart3 className="w-5 h-5" />
                 <span>Usage</span>
               </Link>
+              <button
+                onClick={() => {
+                  setImageDialogOpen(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <ImageIcon className="w-5 h-5" />
+                <span>Image</span>
+              </button>
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
@@ -322,6 +356,11 @@ export default function DashboardLayout({
         onResearchStarted={(projectId) => {
           setActiveResearchId(projectId);
         }}
+      />
+      <ImageGenerationDialog
+        open={imageDialogOpen}
+        onOpenChange={setImageDialogOpen}
+        onGenerate={handleGenerateImage}
       />
     </div>
   );

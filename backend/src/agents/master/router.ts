@@ -111,7 +111,8 @@ export async function* executeHandler(
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
   model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
-  chatSettings?: ChatSettings
+  chatSettings?: ChatSettings,
+  attachedImageUrl?: string
 ): AsyncGenerator<StreamChunk> {
   const { handler, intent } = routingResult;
 
@@ -148,7 +149,7 @@ export async function* executeHandler(
   log.info('Routing to master orchestrator', { userId, intent });
 
   try {
-    yield* handleUserQuery(userMessage, userId, conversationHistory, model, temperature, chatSettings);
+    yield* handleUserQuery(userMessage, userId, conversationHistory, model, temperature, chatSettings, attachedImageUrl);
   } catch (error) {
     log.error('Master orchestrator failed', {
       error: error instanceof Error ? error.message : String(error),

@@ -52,7 +52,7 @@ interface ConversationState {
   createConversation: (title?: string) => Promise<Conversation>;
   updateConversation: (id: string, updates: { title?: string; archived?: boolean }) => Promise<void>;
   deleteConversation: (id: string) => Promise<void>;
-  sendMessage: (conversationId: string, content: string) => Promise<void>;
+  sendMessage: (conversationId: string, content: string, attachedImageUrl?: string) => Promise<void>;
   clearStreamingMessage: () => void;
   setError: (error: string | null) => void;
   reset: () => void;
@@ -183,7 +183,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
     },
 
     // Send message via WebSocket
-    sendMessage: async (conversationId: string, content: string) => {
+    sendMessage: async (conversationId: string, content: string, attachedImageUrl?: string) => {
       if (!wsClient.isConnected()) {
         set({ error: 'Not connected to server' });
         return;
@@ -199,6 +199,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
           kind: 'chat',
           conversationId,
           content,
+          attachedImageUrl, // Include attached image URL for image editing via chat
           settings: {
             disciplineLevel: chatSettings.disciplineLevel,
             minRelevanceScore: chatSettings.minRelevanceScore,
@@ -214,7 +215,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
           },
         });
 
-        // Add user message to UI immediately
+        // Add user message to UI immediately (with attached image if present)
         set((state) => ({
           currentConversation: state.currentConversation
             ? {
@@ -226,6 +227,7 @@ export const useConversationStore = create<ConversationState>((set, get) => {
                     conversationId,
                     role: 'user' as const,
                     content,
+                    imageUrl: attachedImageUrl, // Show attached image in user message
                     createdAt: new Date().toISOString(),
                   },
                 ],

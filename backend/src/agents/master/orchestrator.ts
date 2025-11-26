@@ -425,7 +425,8 @@ export async function* handleUserQuery(
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string; image_url?: string }> = [],
   model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
-  chatSettings?: ChatSettings
+  chatSettings?: ChatSettings,
+  attachedImageUrl?: string // Image attached via chat "+" button
 ): AsyncGenerator<StreamChunk> {
   // Extract temporal metadata from conversation history
   const conversationMetadata: { startTime?: Date; lastMessageTime?: Date } = {};
@@ -456,23 +457,29 @@ export async function* handleUserQuery(
         reasoning: imageIntent.reasoning
       });
 
-      // For image editing operations, find the most recent image URL from conversation history
+      // For image editing operations, find the source image
       let sourceImage: string | undefined;
       const editingOperations = ['image-to-image', 'inpaint', 'upscale', 'variation'];
 
       if (editingOperations.includes(imageIntent.operation!)) {
-        // Search conversation history backwards for the most recent image
-        for (let i = conversationHistory.length - 1; i >= 0; i--) {
-          if (conversationHistory[i].image_url) {
-            sourceImage = conversationHistory[i].image_url;
-            log.info('Found source image for editing', { sourceImage, messageIndex: i });
-            break;
+        // Priority 1: Use attached image from chat "+" button
+        if (attachedImageUrl) {
+          sourceImage = attachedImageUrl;
+          log.info('Using attached image for editing', { sourceImage });
+        } else {
+          // Priority 2: Search conversation history backwards for the most recent image
+          for (let i = conversationHistory.length - 1; i >= 0; i--) {
+            if (conversationHistory[i].image_url) {
+              sourceImage = conversationHistory[i].image_url;
+              log.info('Found source image for editing from history', { sourceImage, messageIndex: i });
+              break;
+            }
           }
         }
 
         if (!sourceImage) {
           yield {
-            content: "I'd love to edit that image, but I don't see a previous image in our conversation to work with. Could you first ask me to generate an image, or describe what you'd like me to create?",
+            content: "I'd love to edit that image, but I don't see an image to work with. You can either:\n1. Use the + button in the chat to attach an image\n2. Ask me to generate an image first, then ask me to edit it",
             done: true,
           };
           return;

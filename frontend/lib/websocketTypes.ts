@@ -18,6 +18,7 @@ export interface ChatMessage {
   kind: 'chat';
   conversationId: string;
   content: string;
+  attachedImageUrl?: string; // For image editing via chat
   settings?: {
     disciplineLevel: 'strict' | 'moderate' | 'exploration';
     minRelevanceScore: number;
@@ -46,8 +47,15 @@ export interface PingMessage {
 export interface ImageGenerateMessage {
   kind: 'image_generate';
   conversationId?: string;
-  operation: 'text-to-image' | 'image-to-image' | 'inpaint' | 'upscale' | 'variation';
-  parameters: any;
+  parameters: {
+    prompt: string;
+    inputImage?: string;
+    aspectRatio?: string;
+    outputFormat?: 'png' | 'jpg';
+    safetyTolerance?: number;
+    promptUpsampling?: boolean;
+    seed?: number;
+  };
 }
 
 export interface ImageListMessage {

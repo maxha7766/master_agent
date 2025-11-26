@@ -33,6 +33,7 @@ interface ChatMessagePayload {
   kind: 'chat';
   conversationId: string;
   content: string;
+  attachedImageUrl?: string; // For image editing via chat
   settings?: ChatSettings;
 }
 
@@ -43,7 +44,7 @@ export async function handleChatMessage(
   ws: AuthenticatedWebSocket,
   message: ChatMessagePayload
 ): Promise<void> {
-  const { conversationId, content, settings: chatSettings } = message;
+  const { conversationId, content, attachedImageUrl, settings: chatSettings } = message;
   const userId = ws.userId!;
 
   const startTime = Date.now();
@@ -195,7 +196,8 @@ export async function handleChatMessage(
       conversationHistory,
       model,
       temperature,
-      chatSettings
+      chatSettings,
+      attachedImageUrl
     )) {
       chunkCount++;
 
