@@ -108,15 +108,16 @@ imagesRouter.get(
 );
 
 /**
- * DELETE /api/images/:path
+ * DELETE /api/images/:userId/:filename
  * Delete an uploaded image
  */
 imagesRouter.delete(
-  '/:path(*)',
+  '/:imageUserId/:filename',
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = req.user!.id;
-      const imagePath = req.params.path;
+      const { imageUserId, filename } = req.params;
+      const imagePath = `${imageUserId}/${filename}`;
 
       // Ensure user can only delete their own images
       if (!imagePath.startsWith(userId)) {
