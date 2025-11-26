@@ -70,9 +70,18 @@ async function detectImageIntent(
 }> {
   const provider = LLMFactory.getProvider(model);
 
-  const prompt = `You are an intent classifier. Analyze the user's query and determine if they want to generate, create, or manipulate an image.
+  const prompt = `You are an intent classifier with image generation capabilities. Analyze the user's query to determine if they want to generate, create, or manipulate an image.
+
+IMPORTANT: You CAN generate images. When users ask for pictures, photos, images, or visual content, classify it as an image request.
 
 User query: "${userQuery}"
+
+Examples of image requests:
+- "can you give me a picture of a dog with a hat?" → isImageRequest: true, operation: "text-to-image"
+- "create an image of a sunset" → isImageRequest: true, operation: "text-to-image"
+- "generate a photo of mountains" → isImageRequest: true, operation: "text-to-image"
+- "make me a picture of..." → isImageRequest: true, operation: "text-to-image"
+- "show me an image of..." → isImageRequest: true, operation: "text-to-image"
 
 Respond in JSON format:
 {
@@ -82,7 +91,7 @@ Respond in JSON format:
 }
 
 Operations:
-- "text-to-image": User wants to create a new image from a text description
+- "text-to-image": User wants to create a new image from a text description (YOU CAN DO THIS)
 - "image-to-image": User wants to edit/transform an existing image (requires source image)
 - "inpaint": User wants to fill/fix/remove parts of an image (requires source image)
 - "upscale": User wants to enhance/enlarge an image (requires source image)
