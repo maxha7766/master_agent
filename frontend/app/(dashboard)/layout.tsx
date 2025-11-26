@@ -84,7 +84,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="h-screen bg-[#212121] flex flex-col overflow-hidden">
+    <div className="h-full bg-[#212121] flex flex-col overflow-hidden">
       {/* Top Navigation */}
       <header className="bg-[#171717] border-b border-gray-800 flex-shrink-0">
         <div className="px-2 sm:px-4">

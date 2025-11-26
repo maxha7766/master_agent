@@ -122,7 +122,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input Container - Fixed at Bottom with safe area for mobile keyboards */}
-        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-2 sm:px-4 py-2 sm:py-4 pb-safe">
+        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-3 sm:px-4 py-3 sm:py-4 pb-safe">
           <div className="max-w-3xl mx-auto">
             <MessageInput
               onSend={handleSendMessage}

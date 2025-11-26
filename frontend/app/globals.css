@@ -26,17 +26,16 @@ body {
 }
 
 /* Mobile viewport height fixes for iOS */
-html, body {
+html, body, #__next {
   height: 100%;
   height: 100dvh; /* Dynamic viewport height for mobile browsers */
   overflow: hidden;
-  position: fixed;
   width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 /* Safe area insets for iOS notches and home indicators */
-@supports (padding-bottom: env(safe-area-inset-bottom)) {
-  .pb-safe {
-    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
-  }
+.pb-safe {
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
 }
