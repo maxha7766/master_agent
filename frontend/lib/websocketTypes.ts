@@ -10,7 +10,9 @@
 export type ClientMessage =
   | ChatMessage
   | CancelMessage
-  | PingMessage;
+  | PingMessage
+  | ImageGenerateMessage
+  | ImageListMessage;
 
 export interface ChatMessage {
   kind: 'chat';
@@ -41,6 +43,17 @@ export interface PingMessage {
   timestamp: number;
 }
 
+export interface ImageGenerateMessage {
+  kind: 'image_generate';
+  conversationId?: string;
+  operation: 'text-to-image' | 'image-to-image' | 'inpaint' | 'upscale' | 'variation';
+  parameters: any;
+}
+
+export interface ImageListMessage {
+  kind: 'image_list';
+}
+
 // ============================================================================
 // Server -> Client Messages
 // ============================================================================
@@ -55,7 +68,9 @@ export type ServerMessage =
   | BudgetWarningMessage
   | PongMessage
   | ConnectionMessage
-  | CancelledMessage;
+  | CancelledMessage
+  | ImageResultMessage
+  | ImageListResultMessage;
 
 export interface StreamStartMessage {
   kind: 'stream_start';
@@ -145,4 +160,17 @@ export interface SearchSource {
   chunkContent: string;
   relevanceScore: number;
   chunkIndex: number;
+}
+
+export interface ImageResultMessage {
+  kind: 'image_result';
+  jobId: string;
+  data: any;
+  costUsd?: number;
+  processingTimeMs?: number;
+}
+
+export interface ImageListResultMessage {
+  kind: 'image_list_result';
+  data: any[];
 }
