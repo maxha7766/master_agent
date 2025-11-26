@@ -150,6 +150,66 @@ export class BudgetService {
   }
 
   /**
+   * Track image generation cost
+   */
+  static async trackImageCost(userId: string, cost: number): Promise<void> {
+    const month = getCurrentMonth();
+
+    // Get existing usage
+    const { data: existing } = await supabase
+      .from('user_usage')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('month', month)
+      .single();
+
+    const usageByModel = (existing?.usage_by_model as Record<string, unknown>) || {};
+    const imageUsage = (usageByModel['image-generation'] as { cost: number; count: number }) || {
+      cost: 0,
+      count: 0,
+    };
+
+    // Update image usage
+    imageUsage.cost += cost;
+    imageUsage.count += 1;
+    usageByModel['image-generation'] = imageUsage;
+
+    if (existing) {
+      // Update existing record
+      const { error: updateError } = await supabase
+        .from('user_usage')
+        .update({
+          total_cost_usd: existing.total_cost_usd + cost,
+          usage_by_model: usageByModel,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', existing.id);
+
+      if (updateError) {
+        log.error('Failed to update image cost', { userId, month, error: updateError.message });
+      }
+    } else {
+      // Create new record
+      const { error: insertError } = await supabase.from('user_usage').insert({
+        user_id: userId,
+        month,
+        total_cost_usd: cost,
+        usage_by_model: usageByModel,
+      });
+
+      if (insertError) {
+        log.error('Failed to insert image cost', { userId, month, error: insertError.message });
+      }
+    }
+
+    log.info('Image generation cost tracked', {
+      userId,
+      cost: Number(cost.toFixed(4)),
+      count: imageUsage.count,
+    });
+  }
+
+  /**
    * Get user's current month usage
    */
   static async getCurrentUsage(userId: string): Promise<{

@@ -166,3 +166,8 @@ registerHandler('cancel', handleCancel);
 // Register chat handler
 import { handleChatMessage } from './handlers/chatHandler.js';
 registerHandler('chat', handleChatMessage);
+
+// Register image handlers
+import { handleImageGenerate, handleImageList } from './handlers/imageHandler.js';
+registerHandler('image_generate', handleImageGenerate);
+registerHandler('image_list', handleImageList);

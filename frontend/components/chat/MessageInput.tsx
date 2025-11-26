@@ -12,9 +12,10 @@ import { Textarea } from '../ui/textarea';
 interface MessageInputProps {
   onSend: (content: string) => void;
   disabled?: boolean;
+  onImageClick?: () => void;
 }
 
-export default function MessageInput({ onSend, disabled }: MessageInputProps) {
+export default function MessageInput({ onSend, disabled, onImageClick }: MessageInputProps) {
   const [message, setMessage] = useState('');
 
   const handleSend = () => {
@@ -48,6 +49,30 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
 
   return (
     <div className="flex gap-3 items-start bg-[#2f2f2f] border-2 border-gray-600 rounded-3xl shadow-lg px-5 py-3 focus-within:border-gray-500 transition-all">
+      {onImageClick && (
+        <Button
+          onClick={onImageClick}
+          disabled={disabled}
+          className="rounded-full h-9 w-9 p-0 transition-all mt-1 bg-gray-700 hover:bg-gray-600 text-gray-300"
+          size="icon"
+          title="Generate Image"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            className="h-4 w-4"
+          >
+            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+          </svg>
+        </Button>
+      )}
       <Textarea
         value={message}
         onChange={(e) => setMessage(e.target.value)}

@@ -14,8 +14,10 @@ import MessageInput from '../../components/chat/MessageInput';
 import StreamingMessage from '../../components/chat/StreamingMessage';
 import ConversationSidebar from '../../components/chat/ConversationSidebar';
 import ChatSettings from '../../components/chat/ChatSettings';
+import { ImageGenerationDialog, type ImageGenerationParams } from '../../components/images/ImageGenerationDialog';
 import { Button } from '../../components/ui/button';
 import { GearIcon } from '@radix-ui/react-icons';
+import { toast } from 'sonner';
 
 export default function ChatPage() {
   const user = useAuthStore((state) => state.user);
@@ -31,6 +33,7 @@ export default function ChatPage() {
 
   const [wsConnected, setWsConnected] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
 
   // Monitor WebSocket connection status (connection handled at layout level)
   useEffect(() => {
@@ -64,6 +67,28 @@ export default function ChatPage() {
   const handleSendMessage = async (content: string) => {
     if (!currentConversation || !wsConnected) return;
     await sendMessage(currentConversation.id, content);
+  };
+
+  const handleGenerateImage = async (params: ImageGenerationParams) => {
+    if (!currentConversation || !wsConnected) {
+      toast.error('Not connected to server');
+      return;
+    }
+
+    try {
+      // Send image generation request via WebSocket
+      wsClient.send({
+        kind: 'image_generate',
+        conversationId: currentConversation.id,
+        operation: params.operation,
+        parameters: params,
+      });
+
+      toast.success('Image generation started...');
+    } catch (error) {
+      console.error('Failed to generate image:', error);
+      toast.error('Failed to start image generation');
+    }
   };
 
   if (!currentConversation) {
@@ -127,6 +152,7 @@ export default function ChatPage() {
             <MessageInput
               onSend={handleSendMessage}
               disabled={!wsConnected || sending}
+              onImageClick={() => setImageDialogOpen(true)}
             />
           </div>
         </div>
@@ -134,6 +160,13 @@ export default function ChatPage() {
 
       {/* Chat Settings Modal */}
       <ChatSettings open={settingsOpen} onOpenChange={setSettingsOpen} />
+
+      {/* Image Generation Dialog */}
+      <ImageGenerationDialog
+        open={imageDialogOpen}
+        onOpenChange={setImageDialogOpen}
+        onGenerate={handleGenerateImage}
+      />
     </div>
   );
 }

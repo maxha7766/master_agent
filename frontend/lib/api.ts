@@ -356,6 +356,13 @@ export interface Message {
   tokensUsed?: number;
   costUsd?: number;
   sources?: SearchSource[];
+  imageUrl?: string;
+  imageMetadata?: {
+    operation: string;
+    width: number;
+    height: number;
+    prompt?: string;
+  };
   createdAt: string;
 }
 
