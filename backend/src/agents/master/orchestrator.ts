@@ -60,52 +60,60 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
 /**
  * Detect image generation intent in user query
  */
-function detectImageIntent(userQuery: string): {
+async function detectImageIntent(
+  userQuery: string,
+  model: string
+): Promise<{
   isImageRequest: boolean;
   operation: 'text-to-image' | 'image-to-image' | 'inpaint' | 'upscale' | 'variation' | null;
   reasoning: string;
-} {
-  const query = userQuery.toLowerCase();
+}> {
+  const provider = LLMFactory.getProvider(model);
 
-  // Text-to-image patterns
-  const textToImageKeywords = /\b(create|generate|make|draw|produce|design|build|show\s+me|visualize|imagine|picture\s+of|give\s+me\s+(a|an)|get\s+me\s+(a|an)|want\s+(a|an))\s+(an?|and|some|the)?\s*(image|picture|photo|illustration|artwork|visual|graphic|diagram)/i;
-  const textToImageImplicit = /\b(create|generate|make|draw)\s+(?!.*\b(?:from|based on|using)\b.*\b(?:image|picture|photo)\b)/i;
+  const prompt = `You are an intent classifier. Analyze the user's query and determine if they want to generate, create, or manipulate an image.
 
-  // Image editing patterns
-  const imageEditKeywords = /\b(edit|modify|change|transform|alter|update)\s+(this|that|the|my)?\s*(image|picture|photo)/i;
-  const imageToImageKeywords = /\b(based on|from|using)\s+(this|that|the|my)?\s*(image|picture|photo)/i;
+User query: "${userQuery}"
 
-  // Upscaling patterns
-  const upscaleKeywords = /\b(upscale|enhance|enlarge|increase resolution|make.*bigger|improve quality)\s+(this|that|the|my)?\s*(image|picture|photo)?/i;
+Respond in JSON format:
+{
+  "isImageRequest": true/false,
+  "operation": "text-to-image" | "image-to-image" | "inpaint" | "upscale" | "variation" | null,
+  "reasoning": "brief explanation"
+}
 
-  // Variation patterns
-  const variationKeywords = /\b(variation|variations|similar|different version|alternative)\s+(of|to)?\s*(this|that|the|my)?\s*(image|picture|photo)/i;
+Operations:
+- "text-to-image": User wants to create a new image from a text description
+- "image-to-image": User wants to edit/transform an existing image (requires source image)
+- "inpaint": User wants to fill/fix/remove parts of an image (requires source image)
+- "upscale": User wants to enhance/enlarge an image (requires source image)
+- "variation": User wants variations of an image (requires source image)
+- null: Not an image request
 
-  // Inpainting patterns
-  const inpaintKeywords = /\b(fill|fix|remove|replace|inpaint)\s+(this|that|the)?\s*(part|area|section|region)\s+(of|in)?\s*(the|this|that)?\s*(image|picture|photo)/i;
+If the user mentions editing, modifying, or using an existing image but hasn't uploaded one, still mark it as the appropriate operation type.`;
 
-  // Check for image generation intent
-  if (upscaleKeywords.test(query)) {
-    return { isImageRequest: true, operation: 'upscale', reasoning: 'Upscale/enhancement keywords detected' };
+  const messages = [{ role: 'user' as const, content: prompt }];
+
+  const response = await provider.chat(messages, model, { temperature: 0 });
+
+  try {
+    // Extract JSON from response (handle markdown code blocks)
+    let jsonText = response.content.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```$/, '');
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/```\n?/, '').replace(/\n?```$/, '');
+    }
+
+    const parsed = JSON.parse(jsonText);
+    return {
+      isImageRequest: parsed.isImageRequest || false,
+      operation: parsed.operation || null,
+      reasoning: parsed.reasoning || 'No reasoning provided',
+    };
+  } catch (error) {
+    log.error('Failed to parse image intent detection response', { response, error });
+    return { isImageRequest: false, operation: null, reasoning: 'Failed to parse response' };
   }
-
-  if (variationKeywords.test(query)) {
-    return { isImageRequest: true, operation: 'variation', reasoning: 'Variation keywords detected' };
-  }
-
-  if (inpaintKeywords.test(query)) {
-    return { isImageRequest: true, operation: 'inpaint', reasoning: 'Inpainting keywords detected' };
-  }
-
-  if (imageEditKeywords.test(query) || imageToImageKeywords.test(query)) {
-    return { isImageRequest: true, operation: 'image-to-image', reasoning: 'Image editing keywords detected' };
-  }
-
-  if (textToImageKeywords.test(query) || textToImageImplicit.test(query)) {
-    return { isImageRequest: true, operation: 'text-to-image', reasoning: 'Image creation keywords detected' };
-  }
-
-  return { isImageRequest: false, operation: null, reasoning: 'No image generation intent detected' };
 }
 
 /**
@@ -418,7 +426,7 @@ export async function* handleUserQuery(
     log.info('🎯 MASTER AGENT START', { userId, query: userQuery.substring(0, 100), chatSettings });
 
     // Step 0.5: Check for image generation intent FIRST (before querying documents)
-    const imageIntent = detectImageIntent(userQuery);
+    const imageIntent = await detectImageIntent(userQuery, model);
 
     if (imageIntent.isImageRequest) {
       log.info('🎨 IMAGE GENERATION DETECTED', {
