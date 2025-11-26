@@ -76,12 +76,26 @@ IMPORTANT: You CAN generate images. When users ask for pictures, photos, images,
 
 User query: "${userQuery}"
 
-Examples of image requests:
-- "can you give me a picture of a dog with a hat?" → isImageRequest: true, operation: "text-to-image"
-- "create an image of a sunset" → isImageRequest: true, operation: "text-to-image"
-- "generate a photo of mountains" → isImageRequest: true, operation: "text-to-image"
-- "make me a picture of..." → isImageRequest: true, operation: "text-to-image"
-- "show me an image of..." → isImageRequest: true, operation: "text-to-image"
+Examples of NEW image creation (text-to-image):
+- "can you give me a picture of a dog with a hat?" → operation: "text-to-image"
+- "create an image of a sunset" → operation: "text-to-image"
+- "generate a photo of mountains" → operation: "text-to-image"
+- "make me a picture of a cat on a tricycle" → operation: "text-to-image"
+
+Examples of EDITING an existing image (image-to-image):
+- "can you give the cat a red collar" → operation: "image-to-image" (modifying existing image)
+- "make the ball red" → operation: "image-to-image" (changing color of element)
+- "change the background to blue" → operation: "image-to-image" (modifying existing image)
+- "add a hat to the dog" → operation: "image-to-image" (adding to existing image)
+- "remove the person in the background" → operation: "image-to-image" (removing from existing)
+- "make it brighter" → operation: "image-to-image" (adjusting existing image)
+- "can you change..." → operation: "image-to-image" (modifying existing)
+- "can you add..." → operation: "image-to-image" (adding to existing)
+- "can you make the..." → operation: "image-to-image" (if referring to element in previous image)
+
+KEY DISTINCTION:
+- If the user is asking for a COMPLETELY NEW image with a full description → "text-to-image"
+- If the user is asking to MODIFY, CHANGE, ADD TO, or EDIT something in a previous image → "image-to-image"
 
 Respond in JSON format:
 {
@@ -91,14 +105,12 @@ Respond in JSON format:
 }
 
 Operations:
-- "text-to-image": User wants to create a new image from a text description (YOU CAN DO THIS)
-- "image-to-image": User wants to edit/transform an existing image (requires source image)
-- "inpaint": User wants to fill/fix/remove parts of an image (requires source image)
-- "upscale": User wants to enhance/enlarge an image (requires source image)
-- "variation": User wants variations of an image (requires source image)
-- null: Not an image request
-
-If the user mentions editing, modifying, or using an existing image but hasn't uploaded one, still mark it as the appropriate operation type.`;
+- "text-to-image": Create a completely NEW image from scratch based on a description
+- "image-to-image": Edit/modify/change an EXISTING image (change colors, add elements, modify parts)
+- "inpaint": Fill/fix/remove specific parts of an image using a mask
+- "upscale": Enhance/enlarge an image resolution
+- "variation": Create variations of an existing image
+- null: Not an image request`;
 
   const messages = [{ role: 'user' as const, content: prompt }];
 
