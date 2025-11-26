@@ -116,7 +116,10 @@ export async function getConversation(
     const transformedMessages = (messages || []).map((msg) => ({
       ...msg,
       imageUrl: msg.image_url,
-      imageMetadata: msg.image_metadata,
+      imageMetadata: msg.image_metadata ? {
+        ...msg.image_metadata,
+        operation: msg.image_metadata.operationType || msg.image_metadata.operation,
+      } : undefined,
     }));
 
     return {
