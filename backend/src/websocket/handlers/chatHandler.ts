@@ -278,6 +278,13 @@ export async function handleChatMessage(
 
     // Send stream end with metadata (including image data)
     const latencyMs = Date.now() - startTime;
+
+    // Transform imageMetadata for frontend compatibility (operationType -> operation)
+    const transformedImageMetadata = imageMetadata ? {
+      ...imageMetadata,
+      operation: imageMetadata.operationType || imageMetadata.operation,
+    } : undefined;
+
     sendMessage(ws, {
       kind: 'stream_end',
       messageId,
@@ -292,7 +299,7 @@ export async function handleChatMessage(
         finishReason: 'stop',
         imageUrl,
         imageUrls,
-        imageMetadata,
+        imageMetadata: transformedImageMetadata,
       },
     });
 

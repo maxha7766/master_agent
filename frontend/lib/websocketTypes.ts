@@ -152,6 +152,16 @@ export interface MessageMetadata {
   costUsd: number;
   latencyMs: number;
   finishReason: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+  imageMetadata?: {
+    operation: string;
+    operationType?: string;
+    width: number;
+    height: number;
+    prompt?: string;
+    generatedImageUrl?: string;
+  };
 }
 
 export interface SearchSource {
