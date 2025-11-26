@@ -467,15 +467,18 @@ export async function* handleUserQuery(
         }
       }
 
-      // For image editing, use low strength to preserve original and enhance prompt
+      // For image editing, use low strength to preserve original and craft explicit prompt
       let editPrompt = userQuery;
       let editStrength = 0.8; // Default for text-to-image
 
       if (sourceImage && imageIntent.operation === 'image-to-image') {
         // Use lower strength for targeted edits to preserve most of the original
-        editStrength = 0.35;
-        // Enhance the prompt to be more specific about preserving the original
-        editPrompt = `${userQuery}. Keep the rest of the image exactly the same, only change what was requested.`;
+        editStrength = 0.3;
+        // Craft an explicit edit prompt that tells the model exactly what to change
+        // and what to preserve
+        editPrompt = `IMPORTANT: Only make this specific change to the image: ${userQuery}.
+Do NOT change anything else in the image. Keep the subject, background, lighting, composition, style, and all other elements exactly the same.
+Only modify the specific element mentioned in the request.`;
       }
 
       // Execute image generation
