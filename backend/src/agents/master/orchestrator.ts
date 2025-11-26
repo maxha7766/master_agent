@@ -27,6 +27,7 @@ interface DocumentInfo {
   chunk_count?: number;
   summary?: string;
   isTabular: boolean;
+  created_at?: string; // When the document was uploaded
 }
 
 // ============================================================================
@@ -59,7 +60,7 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
 
     const { data: documents, error } = await supabase
       .from('documents')
-      .select('id, file_name, file_type, row_count, column_count, chunk_count, summary')
+      .select('id, file_name, file_type, row_count, column_count, chunk_count, summary, created_at')
       .eq('user_id', userId)
       .eq('status', 'completed')
       .order('created_at', { ascending: false });
@@ -72,6 +73,7 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
     const result = documents.map((doc) => ({
       ...doc,
       isTabular: !!(doc.row_count && doc.row_count > 0),
+      created_at: doc.created_at,
     }));
 
     // Update cache
@@ -333,13 +335,21 @@ async function* synthesizeResponse(
     });
   }
 
-  // Build document list
+  // Build document list with upload dates (most recent first)
   const documentList = documents
     .map((doc, i) => {
+      const uploadDate = doc.created_at
+        ? new Date(doc.created_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            timeZone: 'America/Chicago',
+          })
+        : 'Unknown date';
       if (doc.isTabular) {
-        return `${i + 1}. ${doc.file_name} (${doc.row_count} rows, ${doc.column_count} columns)`;
+        return `${i + 1}. ${doc.file_name} (${doc.row_count} rows, ${doc.column_count} columns) - uploaded ${uploadDate}`;
       } else {
-        return `${i + 1}. ${doc.file_name} (${doc.chunk_count} text chunks)`;
+        return `${i + 1}. ${doc.file_name} (${doc.chunk_count} text chunks) - uploaded ${uploadDate}`;
       }
     })
     .join('\n');
@@ -380,7 +390,7 @@ async function* synthesizeResponse(
 
 ${temporalContext}
 
-**User's Documents:**
+**User's Documents (most recent first):**
 ${documentList}
 
 ${memoryContext}
@@ -412,7 +422,7 @@ ${retrievedContext}`
 
 ${temporalContext}
 
-**User's Documents:**
+**User's Documents (most recent first):**
 ${documentList}
 
 ${memoryContext}
