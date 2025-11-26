@@ -140,7 +140,7 @@ export class ReplicateImageService {
       });
 
       // Flux Dev 2 returns a single URL string
-      const imageUrl = Array.isArray(output) ? output[0] : (output as string);
+      const imageUrl = Array.isArray(output) ? output[0] : (output as unknown as string);
 
       return {
         imageUrl,
