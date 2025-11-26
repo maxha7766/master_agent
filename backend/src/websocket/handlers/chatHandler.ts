@@ -131,6 +131,7 @@ export async function handleChatMessage(
         user_id: userId,
         role: 'user',
         content,
+        image_url: attachedImageUrl || null, // Save attached image URL with user message
       }),
       getRecentMessages(conversationId, 20),
     ]);

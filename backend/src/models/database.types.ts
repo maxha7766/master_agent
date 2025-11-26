@@ -118,6 +118,8 @@ export interface Database {
           model_used: string | null;
           tokens_used: number | null;
           latency_ms: number | null;
+          image_url: string | null;
+          image_metadata: Record<string, any> | null;
           created_at: string;
         };
         Insert: {
@@ -130,6 +132,8 @@ export interface Database {
           model_used?: string | null;
           tokens_used?: number | null;
           latency_ms?: number | null;
+          image_url?: string | null;
+          image_metadata?: Record<string, any> | null;
           created_at?: string;
         };
         Update: {
@@ -142,6 +146,8 @@ export interface Database {
           model_used?: string | null;
           tokens_used?: number | null;
           latency_ms?: number | null;
+          image_url?: string | null;
+          image_metadata?: Record<string, any> | null;
           created_at?: string;
         };
       };
