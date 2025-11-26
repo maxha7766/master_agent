@@ -56,6 +56,8 @@ export async function handleChatMessage(
       conversationId,
       messageId,
       contentLength: content.length,
+      hasAttachedImage: !!attachedImageUrl,
+      attachedImageUrl: attachedImageUrl?.substring(0, 80),
     });
 
     // Parallelize database queries and token counting

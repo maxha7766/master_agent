@@ -461,6 +461,13 @@ export async function* handleUserQuery(
       let sourceImage: string | undefined;
       const editingOperations = ['image-to-image', 'inpaint', 'upscale', 'variation'];
 
+      log.info('Checking for image source', {
+        operation: imageIntent.operation,
+        hasAttachedImageUrl: !!attachedImageUrl,
+        attachedImageUrl: attachedImageUrl?.substring(0, 80),
+        historyLength: conversationHistory.length,
+      });
+
       if (editingOperations.includes(imageIntent.operation!)) {
         // Priority 1: Use attached image from chat "+" button
         if (attachedImageUrl) {

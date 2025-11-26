@@ -16,9 +16,14 @@ interface MessageInputProps {
   disabled?: boolean;
 }
 
+interface AttachedImage {
+  url: string;
+  filename: string;
+}
+
 export default function MessageInput({ onSend, disabled }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [attachedImage, setAttachedImage] = useState<string | null>(null);
+  const [attachedImage, setAttachedImage] = useState<AttachedImage | null>(null);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,7 +31,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     const trimmed = message.trim();
     if (!trimmed || disabled) return;
 
-    onSend(trimmed, attachedImage || undefined);
+    onSend(trimmed, attachedImage?.url);
     setMessage('');
     setAttachedImage(null);
   };
@@ -84,7 +89,10 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
       }
 
       const data = await response.json();
-      setAttachedImage(data.url);
+      setAttachedImage({
+        url: data.url,
+        filename: file.name,
+      });
       toast.success('Image attached');
     } catch (error) {
       console.error('Upload error:', error);
@@ -108,21 +116,26 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
     <div className="space-y-2">
       {/* Attached image preview */}
       {attachedImage && (
-        <div className="flex items-center gap-2 px-5">
-          <div className="relative inline-block">
+        <div className="flex items-center gap-2 px-5 mb-1">
+          <div className="flex items-center gap-3 bg-gray-700/60 rounded-lg px-3 py-2">
             <img
-              src={attachedImage}
+              src={attachedImage.url}
               alt="Attached"
-              className="h-16 rounded border border-gray-600"
+              className="h-10 w-10 rounded object-cover"
             />
+            <div className="flex flex-col">
+              <span className="text-sm text-gray-200 truncate max-w-[200px]">
+                {attachedImage.filename}
+              </span>
+              <span className="text-xs text-gray-400">Describe how to edit it</span>
+            </div>
             <button
               onClick={clearAttachment}
-              className="absolute -top-2 -right-2 bg-red-600 rounded-full p-1 hover:bg-red-700"
+              className="ml-2 p-1.5 hover:bg-gray-600 rounded-full transition-colors"
             >
-              <X className="h-3 w-3 text-white" />
+              <X className="h-4 w-4 text-gray-400 hover:text-white" />
             </button>
           </div>
-          <span className="text-xs text-gray-400">Image attached - describe how to edit it</span>
         </div>
       )}
 
@@ -154,7 +167,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={attachedImage ? "Describe how to edit this image..." : "Message..."}
+          placeholder={attachedImage?.url ? "Describe how to edit this image..." : "Message..."}
           disabled={disabled}
           rows={4}
           className="flex-1 bg-transparent border-0 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 text-[15px] px-0 resize-none min-h-[96px]"
