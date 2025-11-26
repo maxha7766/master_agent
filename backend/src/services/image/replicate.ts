@@ -25,6 +25,8 @@ export class ReplicateImageService {
     sdxlImg2Img: 'stability-ai/sdxl:8beff3369e81422112d93b89ca01426147de542cd4684c244b673b105188fe5f',
     sdxlInpaint: 'stability-ai/stable-diffusion-inpainting:95b7223104132402a9ae91cc677285bc5eb997834bd2349fa486f53910fd68b3',
     flux: 'black-forest-labs/flux-schnell',
+    fluxDev: 'black-forest-labs/flux-dev', // For text-to-image
+    fluxDev2: 'black-forest-labs/flux-2-dev', // For image editing with input_images
     upscale: 'nightmareai/real-esrgan:f121d640bd286e1fdc67f9799164c1d5be36ff74576ee11c803ae5b665dd46aa',
   };
 
@@ -32,6 +34,7 @@ export class ReplicateImageService {
   private readonly pricing = {
     sdxl: 0.004,
     flux: 0.003,
+    fluxDev2: 0.025, // Flux Dev 2 is more expensive but much better for edits
     inpaint: 0.004,
     upscale: 0.005,
   };
@@ -117,45 +120,39 @@ export class ReplicateImageService {
   }
 
   /**
-   * Edit existing image using image-to-image
+   * Edit existing image using Flux Dev 2 (much better for targeted edits)
    */
   async editImage(params: ImageToImageParams): Promise<ImageGenerationResult> {
     const startTime = Date.now();
-    const dimensions = this.parseImageSize(params.size);
-    const guidanceScale =
-      params.guidanceScale || this.creativityToGuidanceScale(params.creativityMode);
 
     try {
-      const output = (await this.client.run(this.models.sdxlImg2Img as any, {
+      // Flux Dev 2 uses input_images array and aspect_ratio matching
+      const output = await this.client.run(this.models.fluxDev2 as any, {
         input: {
-          image: params.sourceImage,
           prompt: params.prompt,
-          negative_prompt: params.negativePrompt || 'blurry, low quality, distorted',
-          prompt_strength: params.strength || 0.8,
-          width: params.width || dimensions.width,
-          height: params.height || dimensions.height,
-          guidance_scale: guidanceScale,
-          num_inference_steps: params.numInferenceSteps || 50,
+          input_images: [params.sourceImage], // Pass source image as array
+          aspect_ratio: 'match_input_image', // Keep same dimensions
+          go_fast: true, // Faster generation
+          output_format: 'png',
+          output_quality: 90,
           seed: params.seed,
         },
-      })) as string[];
+      });
 
-      const imageUrl = Array.isArray(output) ? output[0] : output;
+      // Flux Dev 2 returns a single URL string
+      const imageUrl = Array.isArray(output) ? output[0] : (output as string);
 
       return {
         imageUrl,
-        width: params.width || dimensions.width,
-        height: params.height || dimensions.height,
-        model: 'sdxl',
+        width: 1024, // Flux maintains input dimensions
+        height: 1024,
+        model: 'flux-dev-2',
         operationType: 'image-to-image',
         parameters: {
           prompt: params.prompt,
-          negativePrompt: params.negativePrompt,
-          strength: params.strength,
-          guidanceScale,
-          steps: params.numInferenceSteps || 50,
+          sourceImage: typeof params.sourceImage === 'string' ? params.sourceImage : '[buffer]',
         },
-        costUsd: this.pricing.sdxl,
+        costUsd: this.pricing.fluxDev2,
         processingTimeMs: Date.now() - startTime,
       };
     } catch (error) {

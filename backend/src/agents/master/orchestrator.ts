@@ -479,18 +479,13 @@ export async function* handleUserQuery(
         }
       }
 
-      // For image editing, use low strength to preserve original and craft explicit prompt
+      // For image editing with Flux Dev 2, craft a clear edit prompt
       let editPrompt = userQuery;
-      let editStrength = 0.8; // Default for text-to-image
 
       if (sourceImage && imageIntent.operation === 'image-to-image') {
-        // Use lower strength for targeted edits to preserve most of the original
-        editStrength = 0.3;
-        // Craft an explicit edit prompt that tells the model exactly what to change
-        // and what to preserve
-        editPrompt = `IMPORTANT: Only make this specific change to the image: ${userQuery}.
-Do NOT change anything else in the image. Keep the subject, background, lighting, composition, style, and all other elements exactly the same.
-Only modify the specific element mentioned in the request.`;
+        // Flux Dev 2 works best with direct, simple prompts
+        // Extract the core edit request and make it clear
+        editPrompt = `${userQuery}. Keep everything else in the image the same.`;
       }
 
       // Execute image generation
@@ -499,8 +494,6 @@ Only modify the specific element mentioned in the request.`;
           operation: imageIntent.operation!,
           prompt: editPrompt,
           sourceImage, // Pass the source image for editing operations
-          strength: editStrength, // Lower strength for edits
-          creativityMode: 'precise', // Use precise mode for edits to follow prompt closely
         },
         userId,
         conversationHistory[0]?.['conversationId'] // Get conversationId if available
