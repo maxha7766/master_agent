@@ -79,7 +79,7 @@ export class ReplicateImageService {
       params.guidanceScale || this.creativityToGuidanceScale(params.creativityMode);
 
     try {
-      const output = (await this.client.run(this.models.sdxl, {
+      const output = (await this.client.run(this.models.sdxl as any, {
         input: {
           prompt: params.prompt,
           negative_prompt: params.negativePrompt || 'blurry, low quality, distorted, ugly',
@@ -126,7 +126,7 @@ export class ReplicateImageService {
       params.guidanceScale || this.creativityToGuidanceScale(params.creativityMode);
 
     try {
-      const output = (await this.client.run(this.models.sdxlImg2Img, {
+      const output = (await this.client.run(this.models.sdxlImg2Img as any, {
         input: {
           image: params.sourceImage,
           prompt: params.prompt,
@@ -174,7 +174,7 @@ export class ReplicateImageService {
       params.guidanceScale || this.creativityToGuidanceScale(params.creativityMode);
 
     try {
-      const output = (await this.client.run(this.models.sdxlInpaint, {
+      const output = (await this.client.run(this.models.sdxlInpaint as any, {
         input: {
           image: params.sourceImage,
           mask: params.maskImage,
@@ -216,12 +216,12 @@ export class ReplicateImageService {
     const startTime = Date.now();
 
     try {
-      const output = (await this.client.run(this.models.upscale, {
+      const output = await this.client.run(this.models.upscale as any, {
         input: {
           image: params.sourceImage,
           scale: params.scaleFactor || 2,
         },
-      })) as string;
+      }) as unknown as string;
 
       return {
         imageUrl: output,
