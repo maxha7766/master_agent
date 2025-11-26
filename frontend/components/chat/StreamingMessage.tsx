@@ -57,17 +57,6 @@ export default function StreamingMessage({ message }: StreamingMessageProps) {
         )}
       </div>
 
-      {/* Metadata (shown when complete) */}
-      {message.isComplete && message.metadata && (
-        <div className="mt-2 text-xs text-gray-500 flex items-center gap-3">
-          <span>Agent: {message.agent}</span>
-          <span>Model: {message.model}</span>
-          <span>Tokens: {message.metadata.tokensUsed.total.toLocaleString()}</span>
-          <span>Cost: ${message.metadata.costUsd.toFixed(4)}</span>
-          <span>Time: {(message.metadata.latencyMs / 1000).toFixed(1)}s</span>
-        </div>
-      )}
-
       {/* Sources (if available) */}
       {message.sources && message.sources.length > 0 && (
         <div className="mt-3">

@@ -60,27 +60,7 @@ export default function MessageList({ messages }: MessageListProps) {
                   className="rounded-lg border border-gray-700 shadow-lg max-w-full h-auto"
                   loading="lazy"
                 />
-                {message.imageMetadata && (
-                  <div className="mt-2 text-xs text-gray-500">
-                    <span className="capitalize">{message.imageMetadata.operation.replace('-', ' ')}</span>
-                    {' • '}
-                    <span>{message.imageMetadata.width}×{message.imageMetadata.height}</span>
-                  </div>
-                )}
               </div>
-            </div>
-          )}
-
-          {/* Message Metadata - only for assistant */}
-          {message.role === 'assistant' && (
-            <div className="mt-2 text-xs text-gray-500 flex items-center gap-4">
-              {message.model && <span>Model: {message.model}</span>}
-              {message.tokensUsed && (
-                <span>Tokens: {message.tokensUsed.toLocaleString()}</span>
-              )}
-              {message.costUsd && (
-                <span>Cost: ${message.costUsd.toFixed(4)}</span>
-              )}
             </div>
           )}
 
