@@ -112,9 +112,16 @@ export async function getConversation(
       throw new ValidationError('Failed to retrieve messages');
     }
 
+    // Transform snake_case to camelCase for frontend compatibility
+    const transformedMessages = (messages || []).map((msg) => ({
+      ...msg,
+      imageUrl: msg.image_url,
+      imageMetadata: msg.image_metadata,
+    }));
+
     return {
       ...conversation,
-      messages: messages || [],
+      messages: transformedMessages as any,
     };
   } catch (error) {
     if (error instanceof NotFoundError || error instanceof ValidationError) {
