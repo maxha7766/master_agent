@@ -10,6 +10,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Plus, X, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../../lib/supabase';
 
 interface MessageInputProps {
   onSend: (content: string, attachedImageUrl?: string) => void;
@@ -82,8 +83,15 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
       const formData = new FormData();
       formData.append('image', file);
 
-      const token = localStorage.getItem('token');
+      // Get auth token from Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
       console.log('[MessageInput] Auth token present:', !!token);
+
+      if (!token) {
+        toast.error('Please sign in to upload images');
+        return;
+      }
 
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/images/upload`, {
         method: 'POST',
