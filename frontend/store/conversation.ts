@@ -321,6 +321,8 @@ function handleWebSocketMessage(
                     costUsd: message.metadata.costUsd,
                     createdAt: new Date().toISOString(),
                     sources: streamingMsg.sources, // Include sources if available
+                    imageUrl: message.metadata.imageUrl, // Include image URL if available
+                    imageMetadata: message.metadata.imageMetadata, // Include image metadata if available
                   },
                 ],
               }

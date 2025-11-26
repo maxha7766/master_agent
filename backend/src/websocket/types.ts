@@ -85,6 +85,9 @@ export interface MessageMetadata {
   costUsd: number;
   latencyMs: number;
   finishReason: string;
+  imageUrl?: string;
+  imageUrls?: string[];
+  imageMetadata?: any;
 }
 
 export interface SearchSource {

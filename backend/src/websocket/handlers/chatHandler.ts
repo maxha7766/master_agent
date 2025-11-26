@@ -182,6 +182,9 @@ export async function handleChatMessage(
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
     let sourcesUsed: any = null;
+    let imageUrl: string | undefined = undefined;
+    let imageUrls: string[] | undefined = undefined;
+    let imageMetadata: any = undefined;
     let chunkCount = 0;
 
     for await (const chunk of executeHandler(
@@ -216,6 +219,22 @@ export async function handleChatMessage(
         });
       }
 
+      // Capture image data from chunk
+      if (chunk.imageUrl) {
+        imageUrl = chunk.imageUrl;
+        console.log('Image URL found in chunk:', imageUrl);
+      }
+
+      if (chunk.imageUrls) {
+        imageUrls = chunk.imageUrls;
+        console.log('Image URLs found in chunk:', imageUrls);
+      }
+
+      if (chunk.metadata) {
+        imageMetadata = chunk.metadata;
+        console.log('Image metadata found in chunk:', imageMetadata);
+      }
+
       if (chunk.done) {
         console.log('Stream completed. Total chunks:', chunkCount);
         break;
@@ -243,7 +262,7 @@ export async function handleChatMessage(
       totalOutputTokens
     );
 
-    // Save assistant message
+    // Save assistant message (with image URL if present)
     await saveMessage({
       conversation_id: conversationId,
       user_id: userId,
@@ -253,9 +272,11 @@ export async function handleChatMessage(
       model_used: model,
       tokens_used: totalInputTokens + totalOutputTokens,
       latency_ms: Date.now() - startTime,
-    });
+      image_url: imageUrl,
+      image_metadata: imageMetadata,
+    } as any);
 
-    // Send stream end with metadata
+    // Send stream end with metadata (including image data)
     const latencyMs = Date.now() - startTime;
     sendMessage(ws, {
       kind: 'stream_end',
@@ -269,6 +290,9 @@ export async function handleChatMessage(
         costUsd: actualCost,
         latencyMs,
         finishReason: 'stop',
+        imageUrl,
+        imageUrls,
+        imageMetadata,
       },
     });
 
