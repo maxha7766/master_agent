@@ -13,7 +13,6 @@ import { ragAgent } from '../rag/index.js';
 import { tabularAgent } from '../tabular/index.js';
 import { log } from '../../lib/logger.js';
 import { retrieveRelevantMemories, formatMemoriesForPrompt } from '../../services/memory/memoryManager.js';
-import { retrieveRelevantEntities } from '../../services/memory/entityManager.js';
 import { generateTemporalContext, formatTemporalContextForPrompt } from '../../services/temporal/timeContext.js';
 import type { StreamChunk, SourceMetadata } from '../../services/llm/provider.js';
 import type { ChatSettings } from './router.js';
@@ -30,11 +29,34 @@ interface DocumentInfo {
   isTabular: boolean;
 }
 
+// ============================================================================
+// OPTIMIZATION: Document cache with 5-minute TTL
+// ============================================================================
+const documentCache = new Map<string, { documents: DocumentInfo[]; timestamp: number }>();
+const DOCUMENT_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
+/**
+ * Helper to check if conversation has any images
+ */
+function conversationHasImage(
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; image_url?: string }>
+): boolean {
+  return conversationHistory.some((msg) => !!msg.image_url);
+}
+
 /**
  * Query documents table to understand available knowledge
+ * OPTIMIZED: Uses 5-minute cache to avoid repeated DB calls
  */
 async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> {
   try {
+    // Check cache first
+    const cached = documentCache.get(userId);
+    if (cached && Date.now() - cached.timestamp < DOCUMENT_CACHE_TTL) {
+      log.info('📦 Using cached document list', { userId, docCount: cached.documents.length });
+      return cached.documents;
+    }
+
     const { data: documents, error } = await supabase
       .from('documents')
       .select('id, file_name, file_type, row_count, column_count, chunk_count, summary')
@@ -47,10 +69,15 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
       return [];
     }
 
-    return documents.map((doc) => ({
+    const result = documents.map((doc) => ({
       ...doc,
       isTabular: !!(doc.row_count && doc.row_count > 0),
     }));
+
+    // Update cache
+    documentCache.set(userId, { documents: result, timestamp: Date.now() });
+
+    return result;
   } catch (error) {
     log.error('Error querying documents', { userId, error });
     return [];
@@ -58,16 +85,72 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
 }
 
 /**
- * Detect image generation intent in user query
+ * OPTIMIZED: Smart 3-tier image intent detection
+ * Tier 1: Fast regex for obvious cases (~1ms)
+ * Tier 2: Context-aware skip - no image words = skip LLM (~0ms)
+ * Tier 3: LLM fallback for ambiguous cases (runs in parallel with doc query)
  */
-async function detectImageIntent(
+async function detectImageIntentSmart(
   userQuery: string,
-  model: string
+  model: string,
+  hasAttachedImage: boolean,
+  hasImageInConversation: boolean,
+  documentQueryPromise?: Promise<DocumentInfo[]>
 ): Promise<{
   isImageRequest: boolean;
   operation: 'text-to-image' | 'image-to-image' | 'inpaint' | 'upscale' | 'variation' | null;
   reasoning: string;
 }> {
+  const query = userQuery.toLowerCase();
+
+  // ========== TIER 1: Fast regex for obvious cases ==========
+  const textToImagePatterns = [
+    /\b(generate|create|make|draw|design|render|produce)\b.*\b(image|picture|photo|illustration|artwork|visual)\b/i,
+    /\b(image|picture|photo)\b.*\b(of|showing|with)\b/i,
+    /\bgive me (a|an)?\s*(picture|image|photo)/i,
+    /\bmake me (a|an)?\s*(picture|image|photo)/i,
+    /\bvisualize\b/i,
+    /\bcan you (create|generate|make|draw)\b.*\b(image|picture|photo)?\b/i,
+  ];
+
+  const imageEditPatterns = [
+    /\b(change|modify|edit|adjust)\b.*(image|picture|photo|it|this|that)\b/i,
+    /\b(add|remove|replace)\b.*(to|from|in)\s*(the|this|that)?\s*(image|picture|photo|it)?\b/i,
+    /\bmake (it|the image|the picture|this|that|him|her|them)\s+\w+/i,
+    /\bgive (him|her|it|them|the \w+)\s+(a|an)?\s*\w+/i,
+    /\b(brighter|darker|warmer|cooler|bigger|smaller|taller|shorter)\b/i,
+    /\bcan you (change|add|remove|make)\b/i,
+  ];
+
+  // Clear text-to-image match
+  if (textToImagePatterns.some(p => p.test(query))) {
+    log.info('🎨 Image intent: TIER 1 regex match (text-to-image)', { query: query.substring(0, 50) });
+    return { isImageRequest: true, operation: 'text-to-image', reasoning: 'Clear image generation pattern (regex)' };
+  }
+
+  // Clear image edit match (only if image context exists)
+  if ((hasAttachedImage || hasImageInConversation) && imageEditPatterns.some(p => p.test(query))) {
+    log.info('🎨 Image intent: TIER 1 regex match (image-to-image)', { query: query.substring(0, 50) });
+    return { isImageRequest: true, operation: 'image-to-image', reasoning: 'Clear image edit pattern with source image (regex)' };
+  }
+
+  // ========== TIER 2: Context-aware skip ==========
+  // If no image-related words AND no image context, skip LLM entirely
+  const imageAdjacentWords = /\b(show|see|look|visual|picture|image|photo|draw|illustration|artwork|render|display|create|generate|make)\b/i;
+
+  if (!imageAdjacentWords.test(query) && !hasAttachedImage && !hasImageInConversation) {
+    log.info('🎨 Image intent: TIER 2 skip (no image context)', { query: query.substring(0, 50) });
+    return { isImageRequest: false, operation: null, reasoning: 'No image-related context (skipped LLM)' };
+  }
+
+  // ========== TIER 3: LLM fallback (runs in parallel with doc query) ==========
+  // Only reaches here for ambiguous cases with image context
+  log.info('🎨 Image intent: TIER 3 LLM fallback', {
+    query: query.substring(0, 50),
+    hasAttachedImage,
+    hasImageInConversation
+  });
+
   const provider = LLMFactory.getProvider(model);
 
   const prompt = `You are an intent classifier with image generation capabilities. Analyze the user's query to determine if they want to generate, create, or manipulate an image.
@@ -75,49 +158,31 @@ async function detectImageIntent(
 IMPORTANT: You CAN generate images. When users ask for pictures, photos, images, or visual content, classify it as an image request.
 
 User query: "${userQuery}"
+Context: ${hasAttachedImage ? 'User has attached an image' : hasImageInConversation ? 'There is a previous image in the conversation' : 'No images in context'}
 
 Examples of NEW image creation (text-to-image):
 - "can you give me a picture of a dog with a hat?" → operation: "text-to-image"
 - "create an image of a sunset" → operation: "text-to-image"
-- "generate a photo of mountains" → operation: "text-to-image"
-- "make me a picture of a cat on a tricycle" → operation: "text-to-image"
+- "I'd love to see what that looks like" → operation: "text-to-image"
 
 Examples of EDITING an existing image (image-to-image):
-- "can you give the cat a red collar" → operation: "image-to-image" (modifying existing image)
-- "make the ball red" → operation: "image-to-image" (changing color of element)
-- "change the background to blue" → operation: "image-to-image" (modifying existing image)
-- "add a hat to the dog" → operation: "image-to-image" (adding to existing image)
-- "remove the person in the background" → operation: "image-to-image" (removing from existing)
-- "make it brighter" → operation: "image-to-image" (adjusting existing image)
-- "can you change..." → operation: "image-to-image" (modifying existing)
-- "can you add..." → operation: "image-to-image" (adding to existing)
-- "can you make the..." → operation: "image-to-image" (if referring to element in previous image)
+- "can you give the cat a red collar" → operation: "image-to-image"
+- "make the ball red" → operation: "image-to-image"
+- "add a hat to the dog" → operation: "image-to-image"
+- "make it brighter" → operation: "image-to-image"
 
-KEY DISTINCTION:
-- If the user is asking for a COMPLETELY NEW image with a full description → "text-to-image"
-- If the user is asking to MODIFY, CHANGE, ADD TO, or EDIT something in a previous image → "image-to-image"
+Respond in JSON format only:
+{"isImageRequest": true/false, "operation": "text-to-image" | "image-to-image" | null, "reasoning": "brief"}`;
 
-Respond in JSON format:
-{
-  "isImageRequest": true/false,
-  "operation": "text-to-image" | "image-to-image" | "inpaint" | "upscale" | "variation" | null,
-  "reasoning": "brief explanation"
-}
+  // Run LLM in parallel with document query if provided
+  const llmPromise = provider.chat([{ role: 'user' as const, content: prompt }], model, { temperature: 0 });
 
-Operations:
-- "text-to-image": Create a completely NEW image from scratch based on a description
-- "image-to-image": Edit/modify/change an EXISTING image (change colors, add elements, modify parts)
-- "inpaint": Fill/fix/remove specific parts of an image using a mask
-- "upscale": Enhance/enlarge an image resolution
-- "variation": Create variations of an existing image
-- null: Not an image request`;
-
-  const messages = [{ role: 'user' as const, content: prompt }];
-
-  const response = await provider.chat(messages, model, { temperature: 0 });
+  const [response] = await Promise.all([
+    llmPromise,
+    documentQueryPromise || Promise.resolve([]),
+  ]);
 
   try {
-    // Extract JSON from response (handle markdown code blocks)
     let jsonText = response.content.trim();
     if (jsonText.startsWith('```json')) {
       jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```$/, '');
@@ -129,11 +194,11 @@ Operations:
     return {
       isImageRequest: parsed.isImageRequest || false,
       operation: parsed.operation || null,
-      reasoning: parsed.reasoning || 'No reasoning provided',
+      reasoning: parsed.reasoning || 'LLM classification',
     };
   } catch (error) {
     log.error('Failed to parse image intent detection response', { response, error });
-    return { isImageRequest: false, operation: null, reasoning: 'Failed to parse response' };
+    return { isImageRequest: false, operation: null, reasoning: 'Failed to parse LLM response' };
   }
 }
 
@@ -231,6 +296,7 @@ function decideSubAgents(
 
 /**
  * Synthesize conversational response from retrieved data
+ * OPTIMIZED: Memory context is now passed in (retrieved in parallel earlier)
  */
 async function* synthesizeResponse(
   userQuery: string,
@@ -238,6 +304,7 @@ async function* synthesizeResponse(
   documents: DocumentInfo[],
   ragContext: any[],
   tabularData: any,
+  memoryContext: string, // OPTIMIZATION: Now passed in instead of fetched here
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string }>,
   model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
@@ -263,28 +330,6 @@ async function* synthesizeResponse(
   } catch (error) {
     log.error('Failed to generate temporal context', {
       error: error instanceof Error ? error.message : String(error),
-    });
-  }
-
-  // Retrieve relevant memories and entities (filtered more strictly)
-  let memoryContext = '';
-  try {
-    const memories = await retrieveRelevantMemories(userQuery, userId, {
-      topK: 3, // Reduced from 5 to prevent overuse
-      minSimilarity: 0.82, // Increased from 0.7 for better relevance
-    });
-
-    if (memories.length > 0) {
-      memoryContext = formatMemoriesForPrompt(memories);
-      log.info('Memories retrieved for context', {
-        userId,
-        count: memories.length,
-      });
-    }
-  } catch (error) {
-    log.error('Failed to retrieve memories', {
-      error: error instanceof Error ? error.message : String(error),
-      userId,
     });
   }
 
@@ -447,8 +492,18 @@ export async function* handleUserQuery(
   try {
     log.info('🎯 MASTER AGENT START', { userId, query: userQuery.substring(0, 100), chatSettings });
 
-    // Step 0.5: Check for image generation intent FIRST (before querying documents)
-    const imageIntent = await detectImageIntent(userQuery, model);
+    // OPTIMIZATION: Start document query immediately (will run in parallel if LLM fallback needed)
+    const documentQueryPromise = queryAvailableDocuments(userId);
+
+    // Step 0.5: Smart image intent detection (3-tier: regex → context skip → LLM parallel)
+    const hasImageInConversation = conversationHasImage(conversationHistory);
+    const imageIntent = await detectImageIntentSmart(
+      userQuery,
+      model,
+      !!attachedImageUrl,
+      hasImageInConversation,
+      documentQueryPromise
+    );
 
     if (imageIntent.isImageRequest) {
       log.info('🎨 IMAGE GENERATION DETECTED', {
@@ -543,8 +598,8 @@ export async function* handleUserQuery(
       }
     }
 
-    // Step 1: Query documents table
-    const documents = await queryAvailableDocuments(userId);
+    // Step 1: Get documents (already started above, just await if not yet resolved)
+    const documents = await documentQueryPromise;
 
     log.info('📚 STEP 1: Documents queried', {
       userId,
@@ -629,53 +684,60 @@ When asked about the current time or date, use the Current Time shown above. Alw
       }
     }
 
-    // Step 3: Retrieve data from sub-agents
-    let ragContext: any[] = [];
-    let tabularData: any = null;
+    // Step 3: Retrieve data from sub-agents IN PARALLEL (OPTIMIZATION)
+    log.info('🔍 STEP 3: Starting parallel retrieval', {
+      userId,
+      useRAG: decision.useRAG,
+      useTabular: decision.useTabular,
+    });
 
-    if (decision.useRAG) {
-      log.info('🔍 STEP 3A: Retrieving RAG context', {
-        userId,
-        query: userQuery,
-        settings: {
+    // Build parallel retrieval promises
+    const ragPromise = decision.useRAG
+      ? ragAgent.retrieveContext(userQuery, userId, {
           topK: chatSettings?.topK ?? 5,
           minRelevanceScore: chatSettings?.minRelevanceScore ?? 0.0,
-          ragOnlyMode: chatSettings?.ragOnlyMode ?? false
-        }
-      });
-      ragContext = await ragAgent.retrieveContext(userQuery, userId, {
-        topK: chatSettings?.topK ?? 5,
-        minRelevanceScore: chatSettings?.minRelevanceScore ?? 0.0,
-        ragOnlyMode: chatSettings?.ragOnlyMode ?? false,
-      });
-      log.info('✅ RAG context retrieved', {
-        userId,
-        chunks: ragContext.length,
-        preview: ragContext.slice(0, 2).map(c => ({
-          doc: c.fileName,
-          page: c.pageNumber,
-          score: c.score,
-          content: c.content?.substring(0, 100)
-        }))
-      });
-    }
+          ragOnlyMode: chatSettings?.ragOnlyMode ?? false,
+        })
+      : Promise.resolve([]);
 
-    if (decision.useTabular) {
-      log.info('Retrieving tabular data', { userId });
-      tabularData = await tabularAgent.retrieveData(userQuery, userId, conversationHistory, model);
+    const tabularPromise = decision.useTabular
+      ? tabularAgent.retrieveData(userQuery, userId, conversationHistory, model)
+      : Promise.resolve(null);
 
-      // If clarification is needed, return early with the clarification question
-      if (tabularData?.needsClarification) {
-        log.info('Tabular agent needs clarification', { userId, clarificationQuestion: tabularData.clarificationQuestion });
+    // OPTIMIZATION: Retrieve memories in parallel with RAG/tabular
+    const memoryPromise = retrieveRelevantMemories(userQuery, userId, {
+      topK: 3,
+      minSimilarity: 0.82,
+    }).catch((error) => {
+      log.error('Failed to retrieve memories', { error: error instanceof Error ? error.message : String(error), userId });
+      return [];
+    });
 
-        yield {
-          content: tabularData.clarificationQuestion || 'Could you please clarify what you\'d like me to find?',
-          done: true,
-        };
-        return;
-      }
+    // Wait for all retrievals to complete in parallel
+    const [ragContext, tabularData, memories] = await Promise.all([
+      ragPromise,
+      tabularPromise,
+      memoryPromise,
+    ]);
 
-      log.info('Tabular data retrieved', { userId, rows: tabularData.data?.length || 0 });
+    // Format memory context
+    const memoryContext = memories.length > 0 ? formatMemoriesForPrompt(memories) : '';
+
+    log.info('✅ STEP 3: Parallel retrieval complete', {
+      userId,
+      ragChunks: ragContext.length,
+      tabularRows: tabularData?.data?.length || 0,
+      memoriesFound: memories.length,
+    });
+
+    // Handle tabular clarification if needed
+    if (tabularData?.needsClarification) {
+      log.info('Tabular agent needs clarification', { userId, clarificationQuestion: tabularData.clarificationQuestion });
+      yield {
+        content: tabularData.clarificationQuestion || 'Could you please clarify what you\'d like me to find?',
+        done: true,
+      };
+      return;
     }
 
     // Step 4: Build source metadata
@@ -764,6 +826,7 @@ When asked about the current time or date, use the Current Time shown above. Alw
       documents,
       ragContext,
       tabularData,
+      memoryContext, // OPTIMIZATION: Memory context retrieved in parallel
       conversationHistory,
       model,
       temperature,

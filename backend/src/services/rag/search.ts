@@ -139,11 +139,18 @@ export class VectorSearchService {
 
       let filteredResults: SearchResult[];
 
-      // Apply Cohere reranking if enabled and available
-      if (useReranking && cohereRerankService.isEnabled() && candidateResults.length > 0) {
+      // OPTIMIZATION: Conditional Cohere reranking
+      // Skip reranking if top vector similarity is already high confidence
+      const topSimilarity = candidateResults[0]?.similarityScore ?? 0;
+      const needsReranking = topSimilarity < 0.85 || candidateResults.length > 5;
+
+      // Apply Cohere reranking if enabled, available, AND needed
+      if (useReranking && cohereRerankService.isEnabled() && candidateResults.length > 0 && needsReranking) {
         log.info('🎯 SEARCH SERVICE: Applying Cohere reranking', {
           candidateCount: candidateResults.length,
-          targetTopK: topK
+          targetTopK: topK,
+          topSimilarity,
+          reason: topSimilarity < 0.85 ? 'Low confidence' : 'Many candidates'
         });
 
         const rerankDocs = candidateResults.map((r) => ({
@@ -184,8 +191,19 @@ export class VectorSearchService {
           minRelevanceScore,
           filteredOutCount: resultsWithCohereScores.length - filteredResults.length
         });
+      } else if (useReranking && cohereRerankService.isEnabled() && !needsReranking) {
+        // OPTIMIZATION: Skip reranking for high-confidence results
+        log.info('⚡ SEARCH SERVICE: Skipping reranking (high confidence)', {
+          topSimilarity,
+          candidateCount: candidateResults.length,
+        });
+
+        // Use vector similarity scores directly, normalized to 0-1 range
+        filteredResults = candidateResults
+          .filter((r) => r.similarityScore >= minRelevanceScore)
+          .slice(0, topK);
       } else {
-        // No reranking - use RRF scores directly, but lower the threshold
+        // No reranking available - use RRF scores directly, but lower the threshold
         // RRF scores are typically 0.01-0.03, so we should use a much lower threshold
         const rrfMinScore = Math.min(0.01, minRelevanceScore); // Cap at 0.01 for RRF
 
