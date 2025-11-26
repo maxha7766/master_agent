@@ -44,6 +44,9 @@ export interface StreamChunk {
   content: string;
   done: boolean;
   sources?: SourceMetadata; // Optional metadata about sources used
+  imageUrl?: string; // Optional single image URL from image generation
+  imageUrls?: string[]; // Optional multiple image URLs (for variations)
+  metadata?: any; // Optional metadata for images or other responses
 }
 
 /**

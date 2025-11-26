@@ -17,6 +17,7 @@ import { retrieveRelevantEntities } from '../../services/memory/entityManager.js
 import { generateTemporalContext, formatTemporalContextForPrompt } from '../../services/temporal/timeContext.js';
 import type { StreamChunk, SourceMetadata } from '../../services/llm/provider.js';
 import type { ChatSettings } from './router.js';
+import { executeImageGenerationTool } from './tools/imageGenerationTool.js';
 
 interface DocumentInfo {
   id: string;
@@ -54,6 +55,57 @@ async function queryAvailableDocuments(userId: string): Promise<DocumentInfo[]> 
     log.error('Error querying documents', { userId, error });
     return [];
   }
+}
+
+/**
+ * Detect image generation intent in user query
+ */
+function detectImageIntent(userQuery: string): {
+  isImageRequest: boolean;
+  operation: 'text-to-image' | 'image-to-image' | 'inpaint' | 'upscale' | 'variation' | null;
+  reasoning: string;
+} {
+  const query = userQuery.toLowerCase();
+
+  // Text-to-image patterns
+  const textToImageKeywords = /\b(create|generate|make|draw|produce|design|build|show\s+me|visualize|imagine|picture\s+of)\s+(an?|and|some|the)?\s*(image|picture|photo|illustration|artwork|visual|graphic|diagram)/i;
+  const textToImageImplicit = /\b(create|generate|make|draw)\s+(?!.*\b(?:from|based on|using)\b.*\b(?:image|picture|photo)\b)/i;
+
+  // Image editing patterns
+  const imageEditKeywords = /\b(edit|modify|change|transform|alter|update)\s+(this|that|the|my)?\s*(image|picture|photo)/i;
+  const imageToImageKeywords = /\b(based on|from|using)\s+(this|that|the|my)?\s*(image|picture|photo)/i;
+
+  // Upscaling patterns
+  const upscaleKeywords = /\b(upscale|enhance|enlarge|increase resolution|make.*bigger|improve quality)\s+(this|that|the|my)?\s*(image|picture|photo)?/i;
+
+  // Variation patterns
+  const variationKeywords = /\b(variation|variations|similar|different version|alternative)\s+(of|to)?\s*(this|that|the|my)?\s*(image|picture|photo)/i;
+
+  // Inpainting patterns
+  const inpaintKeywords = /\b(fill|fix|remove|replace|inpaint)\s+(this|that|the)?\s*(part|area|section|region)\s+(of|in)?\s*(the|this|that)?\s*(image|picture|photo)/i;
+
+  // Check for image generation intent
+  if (upscaleKeywords.test(query)) {
+    return { isImageRequest: true, operation: 'upscale', reasoning: 'Upscale/enhancement keywords detected' };
+  }
+
+  if (variationKeywords.test(query)) {
+    return { isImageRequest: true, operation: 'variation', reasoning: 'Variation keywords detected' };
+  }
+
+  if (inpaintKeywords.test(query)) {
+    return { isImageRequest: true, operation: 'inpaint', reasoning: 'Inpainting keywords detected' };
+  }
+
+  if (imageEditKeywords.test(query) || imageToImageKeywords.test(query)) {
+    return { isImageRequest: true, operation: 'image-to-image', reasoning: 'Image editing keywords detected' };
+  }
+
+  if (textToImageKeywords.test(query) || textToImageImplicit.test(query)) {
+    return { isImageRequest: true, operation: 'text-to-image', reasoning: 'Image creation keywords detected' };
+  }
+
+  return { isImageRequest: false, operation: null, reasoning: 'No image generation intent detected' };
 }
 
 /**
@@ -364,6 +416,57 @@ export async function* handleUserQuery(
   }
   try {
     log.info('🎯 MASTER AGENT START', { userId, query: userQuery.substring(0, 100), chatSettings });
+
+    // Step 0.5: Check for image generation intent FIRST (before querying documents)
+    const imageIntent = detectImageIntent(userQuery);
+
+    if (imageIntent.isImageRequest) {
+      log.info('🎨 IMAGE GENERATION DETECTED', {
+        userId,
+        operation: imageIntent.operation,
+        reasoning: imageIntent.reasoning
+      });
+
+      // Execute image generation
+      const imageResult = await executeImageGenerationTool(
+        {
+          operation: imageIntent.operation!,
+          prompt: userQuery,
+          creativityMode: 'balanced',
+        },
+        userId,
+        conversationHistory[0]?.['conversationId'] // Get conversationId if available
+      );
+
+      if (imageResult.success) {
+        // Return success response with image
+        const responseMessage = imageResult.imageUrls
+          ? `I've generated ${imageResult.imageUrls.length} image variations for you.`
+          : `I've generated an image for you.`;
+
+        yield {
+          content: responseMessage,
+          done: true,
+          imageUrl: imageResult.imageUrl,
+          imageUrls: imageResult.imageUrls,
+          metadata: imageResult.metadata,
+        };
+
+        log.info('✅ Image generation completed', {
+          userId,
+          costUsd: imageResult.costUsd,
+          operation: imageIntent.operation
+        });
+        return;
+      } else {
+        // Return error response
+        yield {
+          content: `I encountered an error generating the image: ${imageResult.error}`,
+          done: true,
+        };
+        return;
+      }
+    }
 
     // Step 1: Query documents table
     const documents = await queryAvailableDocuments(userId);
