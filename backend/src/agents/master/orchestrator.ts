@@ -410,7 +410,7 @@ ${retrievedContext}`;
 export async function* handleUserQuery(
   userQuery: string,
   userId: string,
-  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string }> = [],
+  conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string; image_url?: string }> = [],
   model: string = 'claude-sonnet-4-5-20250929',
   temperature: number = 0.7,
   chatSettings?: ChatSettings
@@ -444,11 +444,35 @@ export async function* handleUserQuery(
         reasoning: imageIntent.reasoning
       });
 
+      // For image editing operations, find the most recent image URL from conversation history
+      let sourceImage: string | undefined;
+      const editingOperations = ['image-to-image', 'inpaint', 'upscale', 'variation'];
+
+      if (editingOperations.includes(imageIntent.operation!)) {
+        // Search conversation history backwards for the most recent image
+        for (let i = conversationHistory.length - 1; i >= 0; i--) {
+          if (conversationHistory[i].image_url) {
+            sourceImage = conversationHistory[i].image_url;
+            log.info('Found source image for editing', { sourceImage, messageIndex: i });
+            break;
+          }
+        }
+
+        if (!sourceImage) {
+          yield {
+            content: "I'd love to edit that image, but I don't see a previous image in our conversation to work with. Could you first ask me to generate an image, or describe what you'd like me to create?",
+            done: true,
+          };
+          return;
+        }
+      }
+
       // Execute image generation
       const imageResult = await executeImageGenerationTool(
         {
           operation: imageIntent.operation!,
           prompt: userQuery,
+          sourceImage, // Pass the source image for editing operations
           creativityMode: 'balanced',
         },
         userId,

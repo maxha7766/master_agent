@@ -138,6 +138,7 @@ export async function handleChatMessage(
       role: msg.role as 'user' | 'assistant',
       content: msg.content,
       created_at: msg.created_at,
+      image_url: (msg as any).image_url, // Include image URL for image editing operations
     }));
 
     // Route message to appropriate agent
