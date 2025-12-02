@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon } from 'lucide-react';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon, Award } from 'lucide-react';
 import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
 import { ImageGenerationDialog, type ImageGenerationParams } from '../../components/images/ImageGenerationDialog';
@@ -152,6 +152,13 @@ export default function DashboardLayout({
                 >
                   <BarChart3 className="w-4 h-4" />
                   <span>Usage</span>
+                </Link>
+                <Link
+                  href="/cards"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Award className="w-4 h-4" />
+                  <span>Cards</span>
                 </Link>
                 <button
                   onClick={() => setImageDialogOpen(true)}
@@ -297,6 +304,14 @@ export default function DashboardLayout({
               >
                 <BarChart3 className="w-5 h-5" />
                 <span>Usage</span>
+              </Link>
+              <Link
+                href="/cards"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <Award className="w-5 h-5" />
+                <span>Cards</span>
               </Link>
               <button
                 onClick={() => {
