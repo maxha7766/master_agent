@@ -14,6 +14,9 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 
 const supabaseCards = createClient(supabaseUrl, supabaseKey);
 
+// Editable fields type
+export type EditableField = 'card_year' | 'brand' | 'card_number' | 'player_name' | 'attributes' | 'grade' | 'total_cost' | 'estimated_value';
+
 interface GradedCardsState {
   cards: GradedCard[];
   loading: boolean;
@@ -26,6 +29,7 @@ interface GradedCardsState {
   setError: (error: string | null) => void;
   updateEstimatedValue: (cardId: number, estimatedValue: number) => Promise<void>;
   updateTotalCost: (cardId: number, totalCost: number) => Promise<void>;
+  updateCardField: (cardId: number, field: EditableField, value: string | number | null) => Promise<void>;
   addCard: (card: Omit<GradedCard, 'id' | 'created_at'>) => Promise<void>;
 }
 
@@ -102,6 +106,29 @@ export const useGradedCardsStore = create<GradedCardsState>((set, get) => ({
     } catch (err) {
       set({
         error: err instanceof Error ? err.message : 'Failed to update total cost',
+      });
+    }
+  },
+
+  updateCardField: async (cardId: number, field: EditableField, value: string | number | null) => {
+    try {
+      const { error } = await supabaseCards
+        .from('graded_cards')
+        .update({ [field]: value })
+        .eq('id', cardId);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      // Update local state
+      const cards = get().cards.map((card) =>
+        card.id === cardId ? { ...card, [field]: value } : card
+      );
+      set({ cards });
+    } catch (err) {
+      set({
+        error: err instanceof Error ? err.message : 'Failed to update card field',
       });
     }
   },

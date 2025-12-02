@@ -11,7 +11,7 @@ import type { GradedCard } from '../../types/gradedCards';
 import { getGradeBadgeColor, formatCurrency, generateSearchDescription } from '../../types/gradedCards';
 import type { SearchResultCard } from '../../types/gradedCards';
 import SearchResultsModal from './SearchResultsModal';
-import { useGradedCardsStore } from '../../store/gradedCards';
+import { useGradedCardsStore, type EditableField } from '../../store/gradedCards';
 
 interface GradedCardTableProps {
   cards: GradedCard[];
@@ -57,7 +57,7 @@ export default function GradedCardTable({ cards, onSelect }: GradedCardTableProp
 
   // Manual edit state
   const [editingCardId, setEditingCardId] = useState<number | null>(null);
-  const [editingField, setEditingField] = useState<'estimated_value' | 'total_cost' | null>(null);
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState('');
   const editInputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +67,7 @@ export default function GradedCardTable({ cards, onSelect }: GradedCardTableProp
   const resizeStartX = useRef<number>(0);
   const resizeStartWidth = useRef<number>(0);
 
-  const { updateEstimatedValue, updateTotalCost } = useGradedCardsStore();
+  const { updateEstimatedValue, updateTotalCost, updateCardField } = useGradedCardsStore();
 
   // Column resize handlers
   const handleResizeStart = (column: string, e: React.MouseEvent) => {
@@ -166,22 +166,43 @@ export default function GradedCardTable({ cards, onSelect }: GradedCardTableProp
   };
 
   // Handle manual edit
-  const handleStartEdit = (card: GradedCard, field: 'estimated_value' | 'total_cost', e: React.MouseEvent) => {
+  const handleStartEdit = (card: GradedCard, field: EditableField, e: React.MouseEvent) => {
     e.stopPropagation();
     setEditingCardId(card.id);
     setEditingField(field);
-    setEditValue(card[field]?.toString() || '');
+    const value = card[field];
+    setEditValue(value?.toString() || '');
   };
 
   const handleSaveEdit = async (cardId: number) => {
-    const numValue = parseFloat(editValue);
-    if (!isNaN(numValue) && numValue >= 0) {
-      if (editingField === 'estimated_value') {
-        await updateEstimatedValue(cardId, numValue);
-      } else if (editingField === 'total_cost') {
-        await updateTotalCost(cardId, numValue);
+    if (!editingField) return;
+
+    // For numeric fields (total_cost, estimated_value, card_year)
+    if (editingField === 'estimated_value' || editingField === 'total_cost') {
+      const numValue = parseFloat(editValue);
+      if (!isNaN(numValue) && numValue >= 0) {
+        if (editingField === 'estimated_value') {
+          await updateEstimatedValue(cardId, numValue);
+        } else {
+          await updateTotalCost(cardId, numValue);
+        }
+      }
+    } else if (editingField === 'card_year') {
+      const numValue = parseInt(editValue);
+      if (!isNaN(numValue) && numValue > 1900 && numValue <= new Date().getFullYear() + 1) {
+        await updateCardField(cardId, editingField, numValue);
+      }
+    } else {
+      // For string fields (brand, card_number, player_name, attributes, grade)
+      const trimmedValue = editValue.trim();
+      // attributes can be null/empty, others require a value
+      if (editingField === 'attributes') {
+        await updateCardField(cardId, editingField, trimmedValue || null);
+      } else if (trimmedValue) {
+        await updateCardField(cardId, editingField, trimmedValue);
       }
     }
+
     setEditingCardId(null);
     setEditingField(null);
     setEditValue('');
@@ -416,21 +437,177 @@ export default function GradedCardTable({ cards, onSelect }: GradedCardTableProp
                     )}
                   </button>
                 </td>
-                <td className="px-4 py-3 text-white">{card.card_year}</td>
-                <td className="px-4 py-3 text-white">{card.brand}</td>
-                <td className="px-4 py-3 text-gray-400">{card.card_number}</td>
-                <td className="px-4 py-3 text-white font-medium">{card.player_name}</td>
-                <td className="px-4 py-3 text-gray-400 text-sm max-w-[200px] truncate">
-                  {card.attributes || '-'}
-                </td>
+                {/* Year - editable */}
                 <td className="px-4 py-3">
-                  <span
-                    className={`px-2 py-1 rounded text-xs font-bold border ${getGradeBadgeColor(
-                      card.grade
-                    )}`}
-                  >
-                    {card.grade}
-                  </span>
+                  {editingCardId === card.id && editingField === 'card_year' ? (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={editInputRef}
+                        type="number"
+                        min="1900"
+                        max={new Date().getFullYear() + 1}
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, card.id)}
+                        onBlur={() => handleSaveEdit(card.id)}
+                        className="w-16 px-2 py-1 bg-[#2f2f2f] border border-blue-500 rounded text-white text-sm focus:outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className="text-white">{card.card_year}</span>
+                      <button
+                        onClick={(e) => handleStartEdit(card, 'card_year', e)}
+                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit year"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+                {/* Brand - editable */}
+                <td className="px-4 py-3">
+                  {editingCardId === card.id && editingField === 'brand' ? (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, card.id)}
+                        onBlur={() => handleSaveEdit(card.id)}
+                        className="w-full px-2 py-1 bg-[#2f2f2f] border border-blue-500 rounded text-white text-sm focus:outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className="text-white">{card.brand}</span>
+                      <button
+                        onClick={(e) => handleStartEdit(card, 'brand', e)}
+                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit brand"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+                {/* Card Number - editable */}
+                <td className="px-4 py-3">
+                  {editingCardId === card.id && editingField === 'card_number' ? (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, card.id)}
+                        onBlur={() => handleSaveEdit(card.id)}
+                        className="w-12 px-2 py-1 bg-[#2f2f2f] border border-blue-500 rounded text-white text-sm focus:outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className="text-gray-400">{card.card_number}</span>
+                      <button
+                        onClick={(e) => handleStartEdit(card, 'card_number', e)}
+                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit card number"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+                {/* Player Name - editable */}
+                <td className="px-4 py-3">
+                  {editingCardId === card.id && editingField === 'player_name' ? (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, card.id)}
+                        onBlur={() => handleSaveEdit(card.id)}
+                        className="w-full px-2 py-1 bg-[#2f2f2f] border border-blue-500 rounded text-white text-sm focus:outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span className="text-white font-medium">{card.player_name}</span>
+                      <button
+                        onClick={(e) => handleStartEdit(card, 'player_name', e)}
+                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit player name"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+                {/* Attributes - editable */}
+                <td className="px-4 py-3">
+                  {editingCardId === card.id && editingField === 'attributes' ? (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, card.id)}
+                        onBlur={() => handleSaveEdit(card.id)}
+                        className="w-full px-2 py-1 bg-[#2f2f2f] border border-blue-500 rounded text-white text-sm focus:outline-none"
+                        placeholder="Optional"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group max-w-[200px]">
+                      <span className="text-gray-400 text-sm truncate">{card.attributes || '-'}</span>
+                      <button
+                        onClick={(e) => handleStartEdit(card, 'attributes', e)}
+                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100 flex-shrink-0"
+                        title="Edit attributes"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
+                </td>
+                {/* Grade - editable */}
+                <td className="px-4 py-3">
+                  {editingCardId === card.id && editingField === 'grade' ? (
+                    <div onClick={(e) => e.stopPropagation()}>
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        onKeyDown={(e) => handleEditKeyDown(e, card.id)}
+                        onBlur={() => handleSaveEdit(card.id)}
+                        className="w-20 px-2 py-1 bg-[#2f2f2f] border border-blue-500 rounded text-white text-sm focus:outline-none"
+                        placeholder="e.g., PSA 10"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 group">
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-bold border ${getGradeBadgeColor(
+                          card.grade
+                        )}`}
+                      >
+                        {card.grade}
+                      </span>
+                      <button
+                        onClick={(e) => handleStartEdit(card, 'grade', e)}
+                        className="p-1 text-gray-500 hover:text-blue-400 transition-colors opacity-0 group-hover:opacity-100"
+                        title="Edit grade"
+                      >
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-right">
                   {editingCardId === card.id && editingField === 'total_cost' ? (
