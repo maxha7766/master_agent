@@ -4,8 +4,8 @@
  */
 
 import { vectorSearchService, SearchResult } from '../../services/rag/search.js';
-import { LLMProvider } from '../../services/llm/provider.js';
-import { AnthropicProvider } from '../../services/llm/anthropic.js';
+import { documentStorageService } from '../../services/documents/storage.js';
+import { LLMFactory } from '../../services/llm/factory.js';
 import { log } from '../../lib/logger.js';
 
 export interface RAGOptions {
@@ -36,11 +36,6 @@ export interface RAGResponse {
 }
 
 export class RAGAgent {
-  private llm: LLMProvider;
-
-  constructor() {
-    this.llm = new AnthropicProvider();
-  }
 
   /**
    * Generate response with document context
@@ -54,7 +49,7 @@ export class RAGAgent {
 
     const {
       topK = 5,
-      minRelevanceScore = 0.0, // After RRF + Cohere reranking, scores are normalized differently
+      minRelevanceScore = 0.0,
       model = 'claude-sonnet-4-5-20250929',
       temperature = 0.7,
       includeSources = true,
@@ -64,47 +59,73 @@ export class RAGAgent {
     try {
       console.log('\n========== RAG AGENT: GENERATE RESPONSE ==========');
       console.log('Options received:', options);
-      console.log('RAG Only Mode:', ragOnlyMode);
 
-      log.info('RAG query started', {
-        query,
-        userId,
-        topK,
-      });
+      const llm = LLMFactory.getProvider(model);
+      const isLongContextModel = model.includes('gemini-1.5-pro');
 
-      // Step 1: Retrieve relevant document chunks
-      console.log('Calling vectorSearchService.search...');
-      const searchResults = await vectorSearchService.search(query, userId, {
-        topK,
-        minRelevanceScore,
-      });
+      let context = '';
+      let searchResults: SearchResult[] = [];
+      let sourcesForResponse: any[] = [];
 
-      console.log('Search results:', {
-        count: searchResults.length,
-        results: searchResults.map(r => ({
-          fileName: r.fileName,
+      if (isLongContextModel) {
+        // --- HYBRID RAG FLOW (Gemini 1.5 Pro) ---
+        log.info('🚀 RAG AGENT: Using Hybrid Long-Context Flow', { model });
+
+        // 1. Find relevant documents (Document Discovery)
+        const docIds = await vectorSearchService.findRelevantDocuments(query, userId, 3); // Limit to top 3 docs
+
+        if (docIds.length > 0) {
+          // 2. Hydrate full text
+          const docMap = await documentStorageService.getMultipleDocuments(docIds, userId);
+
+          // 3. Build Context from full documents
+          context = Array.from(docMap.entries())
+            .map(([id, text], i) => `[Document ${i + 1}] (ID: ${id}):\n${text}`)
+            .join('\n\n');
+
+          // Create dummy search results for source attribution (since we don't have chunks)
+          // We'll need to fetch metadata to make this look nice, but for now use IDs
+          sourcesForResponse = docIds.map(id => ({
+            documentId: id,
+            fileName: 'Full Document', // We could fetch real names if needed
+            chunkIndex: 0,
+            relevanceScore: 1.0,
+            excerpt: 'Full document used for context.'
+          }));
+
+          log.info('✅ RAG AGENT: Full documents hydrated', { count: docIds.length });
+        } else {
+          context = 'No relevant documents found.';
+        }
+
+      } else {
+        // --- STANDARD RAG FLOW (Chunk-based) ---
+        log.info('Standard RAG query started', { query, userId, topK });
+
+        // 1. Retrieve relevant chunks
+        searchResults = await vectorSearchService.search(query, userId, {
+          topK,
+          minRelevanceScore,
+        });
+
+        // 2. Build context from chunks
+        context = this.buildContext(searchResults);
+
+        sourcesForResponse = searchResults.map((r) => ({
+          documentId: r.documentId,
+          fileName: r.fileName || 'Unknown',
+          chunkIndex: r.chunkIndex || 0,
           pageNumber: r.pageNumber,
           relevanceScore: r.relevanceScore,
-          contentPreview: r.content?.substring(0, 100)
-        }))
-      });
-
-      log.info('Retrieved chunks', {
-        userId,
-        chunksFound: searchResults.length,
-      });
-
-      // Step 2: Build context from chunks
-      const context = this.buildContext(searchResults);
-      console.log('Built context length:', context.length);
-      console.log('Context preview:', context.substring(0, 300));
+          excerpt: this.createExcerpt(r.content, 150),
+        }));
+      }
 
       // Step 3: Generate response with LLM
       const systemPrompt = this.buildSystemPrompt(includeSources, ragOnlyMode);
       const userPrompt = this.buildUserPrompt(query, context);
-      console.log('System prompt (first 200 chars):', systemPrompt.substring(0, 200));
 
-      const llmResponse = await this.llm.chat(
+      const llmResponse = await llm.chat(
         [
           { role: 'system', content: systemPrompt },
           { role: 'user', content: userPrompt },
@@ -117,23 +138,16 @@ export class RAGAgent {
 
       log.info('RAG response generated', {
         userId,
-        chunksUsed: searchResults.length,
+        model,
         tokensUsed: llmResponse.tokensUsed,
         latencyMs,
       });
 
       return {
         content: llmResponse.content,
-        sources: searchResults.map((r) => ({
-          documentId: r.documentId,
-          fileName: r.fileName || 'Unknown',
-          chunkIndex: r.chunkIndex || 0,
-          pageNumber: r.pageNumber,
-          relevanceScore: r.relevanceScore,
-          excerpt: this.createExcerpt(r.content, 150),
-        })),
+        sources: sourcesForResponse,
         metadata: {
-          chunksRetrieved: searchResults.length,
+          chunksRetrieved: isLongContextModel ? sourcesForResponse.length : searchResults.length,
           model,
           tokensUsed: typeof llmResponse.tokensUsed === 'number' ? llmResponse.tokensUsed : llmResponse.tokensUsed?.total || 0,
           latencyMs,
@@ -158,29 +172,63 @@ export class RAGAgent {
   ): AsyncGenerator<string, RAGResponse, unknown> {
     const {
       topK = 5,
-      minRelevanceScore = 0.0, // After RRF + Cohere reranking, scores are normalized differently
+      minRelevanceScore = 0.0,
       model = 'claude-sonnet-4-5-20250929',
       temperature = 0.7,
       includeSources = true,
     } = options;
 
-    // Retrieve relevant chunks
-    const searchResults = await vectorSearchService.search(query, userId, {
-      topK,
-      minRelevanceScore,
-    });
+    const llm = LLMFactory.getProvider(model);
+    const isLongContextModel = model.includes('gemini-1.5-pro');
 
-    // Build prompts
-    const context = this.buildContext(searchResults);
+    let context = '';
+    let searchResults: SearchResult[] = [];
+    let sourcesForResponse: any[] = [];
+
+    if (isLongContextModel) {
+      // --- HYBRID RAG FLOW ---
+      const docIds = await vectorSearchService.findRelevantDocuments(query, userId, 3);
+      if (docIds.length > 0) {
+        const docMap = await documentStorageService.getMultipleDocuments(docIds, userId);
+        context = Array.from(docMap.entries())
+          .map(([id, text], i) => `[Document ${i + 1}]:\n${text}`)
+          .join('\n\n');
+
+        sourcesForResponse = docIds.map(id => ({
+          documentId: id,
+          fileName: 'Full Document',
+          chunkIndex: 0,
+          relevanceScore: 1.0,
+          excerpt: 'Full document used.'
+        }));
+      } else {
+        context = 'No relevant documents found.';
+      }
+    } else {
+      // --- STANDARD RAG FLOW ---
+      searchResults = await vectorSearchService.search(query, userId, {
+        topK,
+        minRelevanceScore,
+      });
+      context = this.buildContext(searchResults);
+      sourcesForResponse = searchResults.map((r) => ({
+        documentId: r.documentId,
+        fileName: r.fileName || 'Unknown',
+        chunkIndex: r.chunkIndex || 0,
+        pageNumber: r.pageNumber,
+        relevanceScore: r.relevanceScore,
+        excerpt: this.createExcerpt(r.content, 150),
+      }));
+    }
+
     const systemPrompt = this.buildSystemPrompt(includeSources, false);
     const userPrompt = this.buildUserPrompt(query, context);
 
-    // Stream LLM response
     let fullContent = '';
     let tokensUsed = 0;
     const startTime = Date.now();
 
-    for await (const chunk of this.llm.chatStream(
+    for await (const chunk of llm.chatStream(
       [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userPrompt },
@@ -201,16 +249,9 @@ export class RAGAgent {
 
     return {
       content: fullContent,
-      sources: searchResults.map((r) => ({
-        documentId: r.documentId,
-        fileName: r.fileName || 'Unknown',
-        chunkIndex: r.chunkIndex || 0,
-        pageNumber: r.pageNumber,
-        relevanceScore: r.relevanceScore,
-        excerpt: this.createExcerpt(r.content, 150),
-      })),
+      sources: sourcesForResponse,
       metadata: {
-        chunksRetrieved: searchResults.length,
+        chunksRetrieved: sourcesForResponse.length,
         model,
         tokensUsed,
         latencyMs,
@@ -239,44 +280,30 @@ export class RAGAgent {
 
   /**
    * Build system prompt for RAG
-   * Following master-rag conversational approach
    */
   private buildSystemPrompt(includeSources: boolean, ragOnlyMode: boolean): string {
     const basePrompt = ragOnlyMode
-      ? `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational - just answer directly without announcing what you're doing or prefacing your responses.
+      ? `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational.
+IMPORTANT: You can ONLY answer using information from the provided context. Do not use any general knowledge outside of what's in the documents.`
+      : `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational.`;
 
-IMPORTANT: You can ONLY answer using information from the provided context. Do not use any general knowledge outside of what's in the documents.
-
+    const guidelines = `
 Guidelines:
-1. Answer directly and naturally - skip the preambles like "Looking at your documents..." or "Based on the research..." - just give the answer
-2. Be concise but complete - get to the point while covering the important details
+1. Answer directly and naturally
+2. Be concise but complete
 3. Ask clarifying questions when needed
 4. If you find related interesting info, mention it naturally
-5. If the context doesn't have the answer, say "I don't have any information about that in the uploaded documents"
-6. When explaining complex topics, make them accessible`
-      : `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational - just answer directly without announcing what you're doing or prefacing your responses.
-
-Guidelines:
-1. Answer directly and naturally - skip the preambles like "Looking at your documents..." or "Based on the research..." - just give the answer
-2. Be concise but complete - get to the point while covering the important details
-3. Ask clarifying questions when needed
-4. If you find related interesting info, mention it naturally
-5. If the context doesn't have the answer, say so clearly
-6. When explaining complex topics, make them accessible`;
+5. If the context doesn't have the answer, say so clearly`;
 
     if (includeSources) {
-      return (
-        basePrompt +
-        `\n7. Reference sources naturally using [Source 1], [Source 2], etc. when making specific claims`
-      );
+      return basePrompt + guidelines + `\n6. Reference sources naturally using [Source 1], [Source 2], etc. when making specific claims`;
     }
 
-    return basePrompt;
+    return basePrompt + guidelines;
   }
 
   /**
    * Build user prompt with query and context
-   * Following master-rag warm, conversational approach
    */
   private buildUserPrompt(query: string, context: string): string {
     return `${query}
@@ -292,47 +319,27 @@ ${context}`;
     if (text.length <= maxLength) {
       return text;
     }
-
     return text.substring(0, maxLength) + '...';
   }
 
   /**
    * Retrieve context chunks WITHOUT generating a response
-   * Returns raw search results for master agent to synthesize
    */
   async retrieveContext(
     query: string,
     userId: string,
     options: { topK?: number; minRelevanceScore?: number; ragOnlyMode?: boolean } = {}
   ): Promise<SearchResult[]> {
-    const { topK = 5, minRelevanceScore = 0.0, ragOnlyMode = false } = options;
+    // This method is primarily for the Master Agent to get chunks.
+    // For now, we'll stick to the standard chunk search here as the Master Agent
+    // likely expects chunks, not full documents.
+    const { topK = 5, minRelevanceScore = 0.0 } = options;
 
     try {
-      log.info('🔍 RAG AGENT: Context retrieval started', {
-        query,
-        userId,
-        topK,
-        minRelevanceScore,
-        ragOnlyMode
-      });
-
-      const searchResults = await vectorSearchService.search(query, userId, {
+      return await vectorSearchService.search(query, userId, {
         topK,
         minRelevanceScore,
       });
-
-      log.info('✅ RAG AGENT: Context retrieved', {
-        userId,
-        chunksFound: searchResults.length,
-        topResults: searchResults.slice(0, 3).map(r => ({
-          doc: r.fileName,
-          page: r.pageNumber,
-          score: r.relevanceScore,
-          preview: r.content?.substring(0, 80)
-        }))
-      });
-
-      return searchResults;
     } catch (error) {
       log.error('❌ RAG AGENT: Context retrieval failed', {
         error: error instanceof Error ? error.message : String(error),
@@ -347,7 +354,6 @@ ${context}`;
    */
   async hasDocuments(userId: string): Promise<boolean> {
     const { supabase } = await import('../../models/database.js');
-
     const { count, error } = await supabase
       .from('documents')
       .select('*', { count: 'exact', head: true })
@@ -358,7 +364,6 @@ ${context}`;
       log.error('Failed to check documents', { error: error.message, userId });
       return false;
     }
-
     return (count || 0) > 0;
   }
 }

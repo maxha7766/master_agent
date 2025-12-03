@@ -450,6 +450,63 @@ export class VectorSearchService {
 
     return this.enrichResults(results);
   }
+  /**
+   * Find relevant documents (not just chunks) for a query
+   * Used for Long Context RAG where we want to pass full documents to the LLM
+   */
+  async findRelevantDocuments(
+    query: string,
+    userId: string,
+    limit: number = 3,
+    threshold: number = 0.5
+  ): Promise<string[]> {
+    // 1. Get more chunks than we need documents (to ensure coverage)
+    const chunkLimit = limit * 5;
+    
+    // 2. Generate query embedding
+    const { embedding: queryEmbedding } = await embeddingsService.embedText(query);
+
+    // 3. Vector search
+    const { data, error } = await supabase.rpc('match_documents', {
+      query_embedding: queryEmbedding,
+      match_threshold: threshold,
+      match_count: chunkLimit,
+      target_user_id: userId,
+    });
+
+    if (error) {
+      log.error('Document discovery failed', { error: error.message, userId });
+      throw error;
+    }
+
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    // 4. Aggregate unique documents
+    // We prioritize documents that appear earlier in the results (higher similarity chunks)
+    const uniqueDocIds = new Set<string>();
+    const relevantDocIds: string[] = [];
+
+    for (const result of data) {
+      if (!uniqueDocIds.has(result.document_id)) {
+        uniqueDocIds.add(result.document_id);
+        relevantDocIds.push(result.document_id);
+        
+        if (relevantDocIds.length >= limit) {
+          break;
+        }
+      }
+    }
+
+    log.info('📄 SEARCH SERVICE: Found relevant documents', {
+      query,
+      found: relevantDocIds.length,
+      docIds: relevantDocIds
+    });
+
+    return relevantDocIds;
+  }
 }
 
 // Singleton instance
