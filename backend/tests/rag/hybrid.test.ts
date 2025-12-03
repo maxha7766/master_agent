@@ -77,6 +77,46 @@ describe('RAGAgent Hybrid Flow', () => {
         expect(response.metadata.model).toBe('gemini-1.5-pro');
     });
 
+    it('should use Hybrid Flow for Gemini 3.0 Flash Thinking', async () => {
+        // Setup mocks
+        const mockDocIds = ['doc-3'];
+        const mockDocMap = new Map([
+            ['doc-3', 'Full content of document 3'],
+        ]);
+
+        vi.mocked(vectorSearchService.findRelevantDocuments).mockResolvedValue(mockDocIds);
+        vi.mocked(documentStorageService.getMultipleDocuments).mockResolvedValue(mockDocMap);
+
+        const mockChat = vi.fn().mockResolvedValue({
+            content: 'Gemini 3 response',
+            tokensUsed: 150,
+        });
+        vi.mocked(LLMFactory.getProvider).mockReturnValue({
+            chat: mockChat,
+            chatStream: vi.fn(),
+            countTokens: vi.fn(),
+            getSupportedModels: vi.fn(),
+            name: 'gemini',
+        } as any);
+
+        // Execute
+        const response = await ragAgent.generateResponse('test query', 'user-1', {
+            model: 'gemini-3.0-flash-thinking-exp-1219',
+        });
+
+        // Verify
+        expect(vectorSearchService.findRelevantDocuments).toHaveBeenCalledWith('test query', 'user-1', 3);
+        expect(documentStorageService.getMultipleDocuments).toHaveBeenCalledWith(mockDocIds, 'user-1');
+        expect(vectorSearchService.search).not.toHaveBeenCalled();
+
+        const llmCallArgs = mockChat.mock.calls[0];
+        const messages = llmCallArgs[0];
+        const userMessage = messages.find((m: any) => m.role === 'user');
+
+        expect(userMessage.content).toContain('Full content of document 3');
+        expect(response.metadata.model).toBe('gemini-3.0-flash-thinking-exp-1219');
+    });
+
     it('should use Standard Flow (Chunk Search) for Claude', async () => {
         // Setup mocks
         const mockChunks = [

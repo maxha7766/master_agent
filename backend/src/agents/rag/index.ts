@@ -61,7 +61,7 @@ export class RAGAgent {
       console.log('Options received:', options);
 
       const llm = LLMFactory.getProvider(model);
-      const isLongContextModel = model.includes('gemini-1.5-pro');
+      const isLongContextModel = model.includes('gemini');
 
       let context = '';
       let searchResults: SearchResult[] = [];
