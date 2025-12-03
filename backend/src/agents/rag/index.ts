@@ -283,20 +283,20 @@ export class RAGAgent {
    */
   private buildSystemPrompt(includeSources: boolean, ragOnlyMode: boolean): string {
     const basePrompt = ragOnlyMode
-      ? `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational.
+      ? `You are a helpful and friendly AI assistant. Your goal is to have a natural, engaging conversation with the user about their documents.
 IMPORTANT: You can ONLY answer using information from the provided context. Do not use any general knowledge outside of what's in the documents.`
-      : `You are a knowledgeable assistant helping someone explore their document library. Be natural and conversational.`;
+      : `You are a helpful and friendly AI assistant. Your goal is to have a natural, engaging conversation with the user about their documents.`;
 
     const guidelines = `
 Guidelines:
-1. Answer directly and naturally
-2. Be concise but complete
-3. Ask clarifying questions when needed
-4. If you find related interesting info, mention it naturally
-5. If the context doesn't have the answer, say so clearly`;
+1. **Be Personable**: Write like a human, not a robot. Use a warm, conversational tone.
+2. **Avoid Robotic Phrases**: NEVER say "According to the document", "Based on the context", or "The text states". Just say it! (e.g., instead of "The document says the project is due Friday", say "It looks like the project is due Friday").
+3. **Flow Naturally**: Weave facts into sentences. You can use lists if they help clarity, but introduce them naturally.
+4. **Be Direct but Polite**: Answer the question directly, but maintain a friendly vibe.
+5. **Context is Key**: If the context doesn't have the answer, say something like "I couldn't find that specific detail in your docs" rather than a robotic "Information not found".`;
 
     if (includeSources) {
-      return basePrompt + guidelines + `\n6. Reference sources naturally using [Source 1], [Source 2], etc. when making specific claims`;
+      return basePrompt + guidelines + `\n6. **Sources**: When you mention specific facts, you can lightly reference sources (e.g., [Source 1]) if needed for credibility, but don't let it break the flow.`;
     }
 
     return basePrompt + guidelines;
