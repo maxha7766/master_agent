@@ -35,9 +35,9 @@ const AVAILABLE_MODELS = [
   { value: 'o1', label: 'o1 (Reasoning)' },
 
   // Google Gemini Models
-  { value: 'gemini-3.0-flash-thinking-exp-1219', label: 'Gemini 3.0 Flash Thinking (Experimental)' },
+  { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro Preview (Latest)' },
+  { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro (Stable)' },
   { value: 'gemini-2.0-flash-exp', label: 'Gemini 2.0 Flash (Fast & Smart)' },
-  { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro (Long Context)' },
 ];
 
 export default function SettingsPage() {
