@@ -20,6 +20,7 @@ export interface TextToVideoParams {
     aspectRatio?: '16:9' | '9:16' | '1:1';
     resolution?: '720p' | '1080p';
     seed?: number;
+    model?: string;
 }
 
 export interface ImageToVideoParams {
@@ -29,6 +30,7 @@ export interface ImageToVideoParams {
     duration?: 5 | 10;
     motionBucketId?: number; // 1-255, controls motion amount
     seed?: number;
+    model?: string;
 }
 
 export interface VideoEditingParams {

@@ -13,6 +13,7 @@ export class ReplicateVideoService {
     private readonly models = {
         // Text-to-Video
         veo3: 'google/veo-3', // High quality, cinematic
+        minimax: 'minimax/video-01', // High quality, cheaper
         wan25: 'wan-video/wan-2.5-t2v-14b', // Fast, open source
 
         // Image-to-Video
@@ -27,6 +28,7 @@ export class ReplicateVideoService {
     // Approximate pricing per generation (USD)
     private readonly pricing = {
         veo3: 0.40, // Estimate for high quality
+        minimax: 0.10,
         wan25: 0.10,
         kling: 0.50, // Often more expensive
         hailuo: 0.30,
@@ -46,22 +48,37 @@ export class ReplicateVideoService {
     async generateVideo(params: TextToVideoParams): Promise<VideoGenerationResult> {
         const startTime = Date.now();
 
-        // Default to Veo 3 for quality, or Wan 2.5 for speed/cost if specified (logic can be added later)
-        // For now, let's default to Wan 2.5 as it's more cost effective for general use, 
-        // or Veo 3 if we want "best". The plan said Veo 3 is primary.
-        const modelId = this.models.veo3;
-        const modelName = 'veo-3';
-        const cost = this.pricing.veo3;
+        // Default to Minimax for cost effectiveness, unless Veo 3 is requested
+        let modelId = this.models.minimax;
+        let modelName = 'minimax-video-01';
+        let cost = this.pricing.minimax;
+
+        if (params.model === 'google/veo-3') {
+            modelId = this.models.veo3;
+            modelName = 'veo-3';
+            cost = this.pricing.veo3;
+        }
 
         try {
-            // Veo 3 inputs
-            const input = {
+            let input: any = {
                 prompt: params.prompt,
-                negative_prompt: params.negativePrompt,
-                aspect_ratio: params.aspectRatio || '16:9',
-                resolution: params.resolution || '1080p',
-                // Veo specific params might differ, adjusting to common Replicate patterns
             };
+
+            if (modelName === 'veo-3') {
+                input = {
+                    ...input,
+                    negative_prompt: params.negativePrompt,
+                    aspect_ratio: params.aspectRatio || '16:9',
+                    resolution: params.resolution || '1080p',
+                };
+            } else {
+                // Minimax specific params (if any differ significantly, adjust here)
+                // Minimax usually takes simple prompt
+                input = {
+                    prompt: params.prompt,
+                    model_name: 'video-01', // specific param for minimax if needed, usually just prompt is enough for the endpoint
+                };
+            }
 
             // Run inference
             const output = await this.client.run(modelId as any, { input });
@@ -75,7 +92,7 @@ export class ReplicateVideoService {
                 operationType: 'text-to-video',
                 parameters: params,
                 costUsd: cost,
-                duration: params.duration || 5, // Veo usually does 5-10s
+                duration: params.duration || 5,
                 processingTimeMs: Date.now() - startTime,
             };
         } catch (error) {

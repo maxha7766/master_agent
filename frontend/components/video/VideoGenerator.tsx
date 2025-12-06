@@ -24,13 +24,13 @@ export interface VideoGenerationParams {
     duration?: 5 | 10;
     resolution?: '720p' | '1080p';
     aspectRatio?: '16:9' | '9:16' | '1:1';
-    model?: 'google/veo-3' | 'kuaishou/kling-2.1';
+    model?: 'google/veo-3' | 'kuaishou/kling-2.1' | 'minimax/video-01';
 }
 
 export function VideoGenerator() {
     const [prompt, setPrompt] = useState('');
     const [mode, setMode] = useState<'text-to-video' | 'image-to-video'>('text-to-video');
-    const [model, setModel] = useState<'google/veo-3' | 'kuaishou/kling-2.1'>('google/veo-3');
+    const [model, setModel] = useState<'google/veo-3' | 'kuaishou/kling-2.1' | 'minimax/video-01'>('minimax/video-01');
     const [duration, setDuration] = useState<'5' | '10'>('5');
     const [resolution, setResolution] = useState<'720p' | '1080p'>('720p');
     const [aspectRatio, setAspectRatio] = useState('16:9');
@@ -245,8 +245,9 @@ export function VideoGenerator() {
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent className="bg-[#2a2a2a] border-gray-700">
-                                    <SelectItem value="google/veo-3">Google Veo 3</SelectItem>
-                                    <SelectItem value="kuaishou/kling-2.1">Kling 2.1</SelectItem>
+                                    <SelectItem value="minimax/video-01">Minimax (Standard) - $0.10</SelectItem>
+                                    <SelectItem value="google/veo-3">Google Veo 3 (Premium) - $0.40</SelectItem>
+                                    <SelectItem value="kuaishou/kling-2.1">Kling 2.1 (High Motion) - $0.50</SelectItem>
                                 </SelectContent>
                             </Select>
                         </div>
