@@ -40,6 +40,7 @@ export default function SearchResultsModal({
 
   // Reset selections when results change
   useEffect(() => {
+    // eslint-disable-next-line
     setSelectedIndices(new Set());
   }, [results]);
 
@@ -174,9 +175,8 @@ export default function SearchResultsModal({
                   {results.map((card, index) => (
                     <tr
                       key={index}
-                      className={`border-b border-gray-800 hover:bg-[#2a2a2a] transition-colors cursor-pointer ${
-                        selectedIndices.has(index) ? 'bg-blue-900/20' : ''
-                      }`}
+                      className={`border-b border-gray-800 hover:bg-[#2a2a2a] transition-colors cursor-pointer ${selectedIndices.has(index) ? 'bg-blue-900/20' : ''
+                        }`}
                       onClick={() => toggleSelection(index)}
                     >
                       <td className="px-3 py-3 text-center">
