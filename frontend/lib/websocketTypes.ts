@@ -12,7 +12,9 @@ export type ClientMessage =
   | CancelMessage
   | PingMessage
   | ImageGenerateMessage
-  | ImageListMessage;
+  | ImageListMessage
+  | VideoGenerateMessage
+  | VideoListMessage;
 
 export interface ChatMessage {
   kind: 'chat';
@@ -62,6 +64,28 @@ export interface ImageListMessage {
   kind: 'image_list';
 }
 
+export interface VideoGenerateMessage {
+  kind: 'video_generate';
+  conversationId?: string;
+  operation: 'text-to-video' | 'image-to-video' | 'video-editing';
+  parameters: {
+    prompt: string;
+    negativePrompt?: string;
+    sourceImage?: string;
+    sourceVideo?: string;
+    duration?: 5 | 10;
+    aspectRatio?: '16:9' | '9:16' | '1:1';
+    resolution?: '720p' | '1080p';
+    seed?: number;
+    style?: string;
+    model?: string;
+  };
+}
+
+export interface VideoListMessage {
+  kind: 'video_list';
+}
+
 // ============================================================================
 // Server -> Client Messages
 // ============================================================================
@@ -78,7 +102,9 @@ export type ServerMessage =
   | ConnectionMessage
   | CancelledMessage
   | ImageResultMessage
-  | ImageListResultMessage;
+  | ImageListResultMessage
+  | VideoResultMessage
+  | VideoListResultMessage;
 
 export interface StreamStartMessage {
   kind: 'stream_start';
@@ -190,5 +216,18 @@ export interface ImageResultMessage {
 
 export interface ImageListResultMessage {
   kind: 'image_list_result';
+  data: any[];
+}
+
+export interface VideoResultMessage {
+  kind: 'video_result';
+  jobId: string;
+  data: any;
+  costUsd?: number;
+  processingTimeMs?: number;
+}
+
+export interface VideoListResultMessage {
+  kind: 'video_list_result';
   data: any[];
 }

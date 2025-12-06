@@ -171,3 +171,8 @@ registerHandler('chat', handleChatMessage);
 import { handleImageGenerate, handleImageList } from './handlers/imageHandler.js';
 registerHandler('image_generate', handleImageGenerate);
 registerHandler('image_list', handleImageList);
+
+// Register video handlers
+import { handleVideoGenerate, handleVideoList } from './handlers/videoHandler.js';
+registerHandler('video_generate', handleVideoGenerate);
+registerHandler('video_list', handleVideoList);

@@ -11,7 +11,7 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon, Award } from 'lucide-react';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon, Award, Film } from 'lucide-react';
 import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
 import { ImageGenerationDialog, type ImageGenerationParams } from '../../components/images/ImageGenerationDialog';
@@ -168,6 +168,13 @@ export default function DashboardLayout({
                   <span>Image</span>
                 </button>
                 <Link
+                  href="/video"
+                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
+                >
+                  <Film className="w-4 h-4" />
+                  <span>Video</span>
+                </Link>
+                <Link
                   href="/settings"
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
                 >
@@ -231,9 +238,8 @@ export default function DashboardLayout({
 
       {/* Mobile Menu Drawer */}
       <div
-        className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#171717] z-50 transform transition-transform duration-300 ease-in-out md:hidden ${
-          mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
-        }`}
+        className={`fixed top-0 right-0 h-full w-80 max-w-[85vw] bg-[#171717] z-50 transform transition-transform duration-300 ease-in-out md:hidden ${mobileMenuOpen ? 'translate-x-0' : 'translate-x-full'
+          }`}
       >
         <div className="h-full flex flex-col">
           {/* Menu Header */}
@@ -323,6 +329,14 @@ export default function DashboardLayout({
                 <ImageIcon className="w-5 h-5" />
                 <span>Image</span>
               </button>
+              <Link
+                href="/video"
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <Film className="w-5 h-5" />
+                <span>Video</span>
+              </Link>
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}

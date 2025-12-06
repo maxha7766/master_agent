@@ -20,6 +20,7 @@ import settingsRouter from './api/routes/settings.js';
 import usageRouter from './api/routes/usage.js';
 import memoriesRouter from './routes/memories.js';
 import { imagesRouter } from './api/routes/images.js';
+import { videosRouter } from './api/routes/videos.js';
 import { wsManager } from './websocket/server.js';
 import { log } from './lib/logger.js';
 import { AppError } from './lib/errors.js';
@@ -76,7 +77,9 @@ app.use('/api/research', researchRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/usage', usageRouter);
 app.use('/api/memories', memoriesRouter);
+app.use('/api/memories', memoriesRouter);
 app.use('/api/images', imagesRouter);
+app.use('/api/videos', videosRouter);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

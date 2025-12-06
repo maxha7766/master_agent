@@ -17,6 +17,7 @@ import { generateTemporalContext, formatTemporalContextForPrompt } from '../../s
 import type { StreamChunk, SourceMetadata } from '../../services/llm/provider.js';
 import type { ChatSettings } from './router.js';
 import { executeImageGenerationTool } from './tools/imageGenerationTool.js';
+import { executeVideoGenerationTool } from './tools/videoGenerationTool.js';
 
 interface DocumentInfo {
   id: string;
@@ -204,6 +205,74 @@ Respond in JSON format only:
   }
 }
 
+
+/**
+ * Detect video generation intent
+ */
+async function detectVideoIntent(
+  userQuery: string,
+  model: string
+): Promise<{
+  isVideoRequest: boolean;
+  operation: 'text-to-video' | 'image-to-video' | 'video-editing' | null;
+  reasoning: string;
+}> {
+  const query = userQuery.toLowerCase();
+
+  // Fast regex check
+  const videoPatterns = [
+    /\b(generate|create|make|produce)\b.*\b(video|movie|clip|animation)\b/i,
+    /\b(video|movie|clip|animation)\b.*\b(of|showing|with)\b/i,
+    /\bgive me (a|an)?\s*(video|movie|clip|animation)/i,
+    /\bmake me (a|an)?\s*(video|movie|clip|animation)/i,
+    /\banimate\b/i,
+  ];
+
+  if (videoPatterns.some(p => p.test(query))) {
+    log.info('🎥 Video intent: Regex match', { query: query.substring(0, 50) });
+    // Default to text-to-video unless "animate" is used
+    const operation = /\banimate\b/i.test(query) ? 'image-to-video' : 'text-to-video';
+    return { isVideoRequest: true, operation, reasoning: 'Clear video generation pattern (regex)' };
+  }
+
+  // Context-aware skip
+  const videoKeywords = /\b(video|movie|clip|animation|animate|motion|moving)\b/i;
+  if (!videoKeywords.test(query)) {
+    return { isVideoRequest: false, operation: null, reasoning: 'No video-related context' };
+  }
+
+  // LLM Fallback
+  const provider = LLMFactory.getProvider(model);
+  const prompt = `Analyze if the user wants to generate or edit a video.
+User query: "${userQuery}"
+
+Capabilities:
+- text-to-video: Create new video from text
+- image-to-video: Animate an existing image
+- video-editing: Edit an existing video
+
+Respond in JSON: {"isVideoRequest": boolean, "operation": "text-to-video" | "image-to-video" | "video-editing" | null, "reasoning": "string"}`;
+
+  try {
+    const response = await provider.chat([{ role: 'user', content: prompt }], model, { temperature: 0 });
+    let jsonText = response.content.trim();
+    if (jsonText.startsWith('```json')) {
+      jsonText = jsonText.replace(/```json\n?/, '').replace(/\n?```$/, '');
+    } else if (jsonText.startsWith('```')) {
+      jsonText = jsonText.replace(/```\n?/, '').replace(/\n?```$/, '');
+    }
+    const parsed = JSON.parse(jsonText);
+    return {
+      isVideoRequest: parsed.isVideoRequest || false,
+      operation: parsed.operation || null,
+      reasoning: parsed.reasoning || 'LLM classification',
+    };
+  } catch (error) {
+    log.error('Failed to detect video intent', { error });
+    return { isVideoRequest: false, operation: null, reasoning: 'Failed to parse LLM response' };
+  }
+}
+
 /**
  * Decide which sub-agents to call based on query and available documents
  */
@@ -340,11 +409,11 @@ async function* synthesizeResponse(
     .map((doc, i) => {
       const uploadDate = doc.created_at
         ? new Date(doc.created_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            timeZone: 'America/Chicago',
-          })
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric',
+          timeZone: 'America/Chicago',
+        })
         : 'Unknown date';
       if (doc.isTabular) {
         return `${i + 1}. ${doc.file_name} (${doc.row_count} rows, ${doc.column_count} columns) - uploaded ${uploadDate}`;
@@ -542,6 +611,76 @@ export async function* handleUserQuery(
       documentQueryPromise
     );
 
+    // Step 0.6: Video Intent Detection
+    const videoIntent = await detectVideoIntent(userQuery, model);
+
+    if (videoIntent.isVideoRequest) {
+      log.info('🎥 VIDEO GENERATION DETECTED', {
+        userId,
+        operation: videoIntent.operation,
+        reasoning: videoIntent.reasoning
+      });
+
+      let sourceImage: string | undefined;
+      let sourceVideo: string | undefined;
+
+      // Find source media if needed
+      if (videoIntent.operation === 'image-to-video') {
+        if (attachedImageUrl) {
+          sourceImage = attachedImageUrl;
+        } else {
+          // Search history for image
+          for (let i = conversationHistory.length - 1; i >= 0; i--) {
+            if (conversationHistory[i].image_url) {
+              sourceImage = conversationHistory[i].image_url;
+              break;
+            }
+          }
+        }
+
+        if (!sourceImage) {
+          yield {
+            content: "I can animate an image for you, but I need an image first. Please attach one or ask me to generate an image to animate.",
+            done: true,
+          };
+          return;
+        }
+      }
+
+      // Execute video generation
+      const videoResult = await executeVideoGenerationTool(
+        {
+          operation: videoIntent.operation!,
+          prompt: userQuery,
+          sourceImage,
+          sourceVideo,
+        },
+        userId,
+        conversationHistory[0]?.['conversationId']
+      );
+
+      if (videoResult.success) {
+        yield {
+          content: `I've generated a video for you based on your request: "${userQuery}"`,
+          done: true,
+          // We can pass video URL in metadata or content if frontend supports it
+          // Ideally frontend should handle video_url in metadata similar to image_url
+          metadata: {
+            ...videoResult.metadata,
+            videoUrl: videoResult.videoUrl,
+            type: 'video_generation_result'
+          }
+        };
+        return;
+      } else {
+        yield {
+          content: `I encountered an error generating the video: ${videoResult.error}`,
+          done: true,
+        };
+        return;
+      }
+    }
+
     if (imageIntent.isImageRequest) {
       log.info('🎨 IMAGE GENERATION DETECTED', {
         userId,
@@ -690,8 +829,8 @@ When asked about the current time or date, use the Current Time shown above. Alw
 
     // Check if this is a meta-query about the document list itself
     const isMetaQuery = /what (documents|files|data|tables).*(?:do you have|are (?:in|available)|exist|uploaded)/i.test(userQuery) ||
-                        /list.*(?:documents|files|tables)/i.test(userQuery) ||
-                        /show.*(?:documents|files|tables)/i.test(userQuery);
+      /list.*(?:documents|files|tables)/i.test(userQuery) ||
+      /show.*(?:documents|files|tables)/i.test(userQuery);
 
     // Override decision if RAG-only mode is enabled
     if (chatSettings?.ragOnlyMode) {
@@ -731,10 +870,10 @@ When asked about the current time or date, use the Current Time shown above. Alw
     // Build parallel retrieval promises
     const ragPromise = decision.useRAG
       ? ragAgent.retrieveContext(userQuery, userId, {
-          topK: chatSettings?.topK ?? 5,
-          minRelevanceScore: chatSettings?.minRelevanceScore ?? 0.0,
-          ragOnlyMode: chatSettings?.ragOnlyMode ?? false,
-        })
+        topK: chatSettings?.topK ?? 5,
+        minRelevanceScore: chatSettings?.minRelevanceScore ?? 0.0,
+        ragOnlyMode: chatSettings?.ragOnlyMode ?? false,
+      })
       : Promise.resolve([]);
 
     const tabularPromise = decision.useTabular
