@@ -310,7 +310,7 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
               <label className="flex-1">
                 <input
                   type="file"
-                  accept={isTableMode ? '.csv, .xlsx, .xls' : '.txt, .pdf, .docx, .epub, application/epub+zip'}
+                  accept={isTableMode ? '.csv,.xlsx,.xls' : '.txt,.pdf,.docx,.epub,application/epub+zip,application/x-epub'}
                   onChange={handleFileUpload}
                   disabled={uploading}
                   multiple
@@ -341,7 +341,7 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
             <p className="text-sm text-gray-500 mt-2">
               {isTableMode
                 ? 'Supported formats: .csv, .xlsx, .xls (max 100MB each) • Select multiple files'
-                : 'Supported formats: .txt, .pdf, .docx, .epub (max 100MB each) • Select multiple files'}
+                : 'Supported formats: .txt, .pdf, .docx, .epub (v2) (max 100MB each) • Select multiple files'}
             </p>
           </Card>
 
