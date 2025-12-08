@@ -192,7 +192,7 @@ async function processTabularDocument(
           .from('documents')
           .update({ processing_progress: progressPercent })
           .eq('id', documentId)
-          .then(() => {});
+          .then(() => { });
       }
     );
 
@@ -260,6 +260,7 @@ const upload = multer({
       'application/csv',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', // xlsx
       'application/vnd.ms-excel', // xls
+      'application/epub+zip', // epub
     ];
 
     if (allowedTypes.includes(file.mimetype)) {
@@ -314,6 +315,26 @@ documentsRouter.post(
 
         if (!textContent || textContent.trim().length === 0) {
           throw new ValidationError('PDF appears to be empty or could not be parsed');
+        }
+      } else if (file.mimetype === 'application/epub+zip') {
+        // Write buffer to temp file for epub2
+        const fs = await import('fs');
+        const path = await import('path');
+        const os = await import('os');
+
+        const tempDir = os.tmpdir();
+        const tempFilePath = path.join(tempDir, `upload-${crypto.randomBytes(8).toString('hex')}.epub`);
+
+        try {
+          await fs.promises.writeFile(tempFilePath, file.buffer);
+          textContent = await documentProcessor.extractText(tempFilePath, 'application/epub+zip');
+        } finally {
+          // Clean up temp file
+          await fs.promises.unlink(tempFilePath).catch(err => log.error('Failed to cleanup temp epub', { error: err }));
+        }
+
+        if (!textContent || textContent.trim().length === 0) {
+          throw new ValidationError('EPUB appears to be empty or could not be parsed');
         }
       } else if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
         // For DOCX, we'll need mammoth or similar
