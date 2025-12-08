@@ -114,7 +114,7 @@ export default function ChatPage() {
         )}
 
         {/* Messages - Scrollable Area with proper mobile sizing */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden px-2 sm:px-4 md:px-6 py-4 sm:py-6 min-h-0">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 min-h-0 scroll-smooth">
           <MessageList messages={currentConversation.messages} />
           {streamingMessage && (
             <StreamingMessage message={streamingMessage} />
@@ -122,7 +122,7 @@ export default function ChatPage() {
         </div>
 
         {/* Input Container - Fixed at Bottom with safe area for mobile keyboards */}
-        <div className="flex-shrink-0 border-t border-gray-800 bg-[#212121] px-3 sm:px-4 py-3 sm:py-4 pb-safe">
+        <div className="flex-shrink-0 bg-[#212121] px-2 sm:px-4 py-2 sm:py-4 pb-safe border-t border-transparent">
           <div className="max-w-3xl mx-auto">
             <MessageInput
               onSend={handleSendMessage}

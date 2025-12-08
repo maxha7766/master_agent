@@ -163,7 +163,7 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
         </div>
       )}
 
-      <div className="flex gap-3 items-start bg-[#2f2f2f] border-2 border-gray-600 rounded-3xl shadow-lg px-5 py-3 focus-within:border-gray-500 transition-all">
+      <div className="flex gap-2 items-end bg-[#2f2f2f] rounded-[24px] px-4 py-2 border border-gray-700 focus-within:border-gray-500 transition-all">
         {/* Attachment button */}
         <input
           ref={fileInputRef}
@@ -176,14 +176,14 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
         <Button
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || uploading}
-          className="rounded-full h-9 w-9 p-0 transition-all mt-1 bg-gray-700 hover:bg-gray-600 text-gray-300"
+          className="rounded-full h-8 w-8 p-0 transition-all flex-shrink-0 text-gray-400 hover:text-white bg-transparent hover:bg-gray-700/50 mb-0.5"
           size="icon"
           title="Attach Image"
         >
           {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <Plus className="h-4 w-4" />
+            <Plus className="h-6 w-6" />
           )}
         </Button>
 
@@ -191,19 +191,19 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder={attachedImage?.url ? "Describe how to edit this image..." : "Message..."}
+          placeholder={attachedImage?.url ? "Describe how to edit..." : "Message"}
           disabled={disabled}
-          rows={4}
-          className="flex-1 bg-transparent border-0 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 text-[15px] px-0 resize-none min-h-[96px]"
+          rows={1}
+          className="flex-1 bg-transparent border-0 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 text-[16px] px-0 py-1.5 resize-none min-h-[36px] max-h-[120px]"
         />
+
         <Button
           onClick={handleSend}
           disabled={disabled || !message.trim()}
-          className={`rounded-full h-9 w-9 p-0 transition-all mt-1 ${
-            message.trim()
-              ? 'bg-white hover:bg-gray-200 text-black'
+          className={`rounded-full h-8 w-8 p-0 transition-all flex-shrink-0 mb-0.5 ${message.trim()
+              ? 'bg-blue-600 hover:bg-blue-500 text-white'
               : 'bg-gray-700 text-gray-500 cursor-not-allowed'
-          }`}
+            }`}
           size="icon"
         >
           <svg

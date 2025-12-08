@@ -33,19 +33,14 @@ export default function MessageList({ messages }: MessageListProps) {
           className={`mb-6 ${message.role === 'user' ? 'ml-auto max-w-2xl' : ''}`}
         >
           {/* Label */}
-          <div
-            className={`text-xs text-gray-500 mb-1 font-medium ${
-              message.role === 'user' ? 'text-right' : 'text-left'
-            }`}
-          >
-            {message.role === 'user' ? 'You' : 'Assistant'}
-          </div>
+          {/* Label Removed for Cleaner UI */}
 
-          {/* Message Content - no bubble */}
+          {/* Message Content - Bubble Style */}
           <div
-            className={`text-[15px] leading-relaxed whitespace-pre-wrap ${
-              message.role === 'user' ? 'text-white text-right' : 'text-gray-100 text-left'
-            }`}
+            className={`px-4 py-3 rounded-2xl shadow-sm text-[15px] leading-relaxed whitespace-pre-wrap ${message.role === 'user'
+              ? 'bg-blue-600 text-white rounded-tr-sm'
+              : 'bg-[#2f2f2f] text-gray-100 rounded-tl-sm border border-gray-700/50'
+              }`}
           >
             {message.content}
           </div>
