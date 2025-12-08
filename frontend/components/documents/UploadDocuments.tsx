@@ -310,7 +310,7 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
               <label className="flex-1">
                 <input
                   type="file"
-                  accept={isTableMode ? '.csv,.xlsx,.xls' : '.txt,.pdf,.docx,.epub,application/epub+zip'}
+                  accept={isTableMode ? '.csv, .xlsx, .xls' : '.txt, .pdf, .docx, .epub, application/epub+zip'}
                   onChange={handleFileUpload}
                   disabled={uploading}
                   multiple
