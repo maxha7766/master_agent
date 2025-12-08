@@ -164,10 +164,10 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
           prev.map((d) =>
             d.id === documentId
               ? {
-                  ...d,
-                  status: doc.status,
-                  processing_progress: progress,
-                }
+                ...d,
+                status: doc.status,
+                processing_progress: progress,
+              }
               : d
           )
         );
@@ -221,9 +221,8 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
       <div className="mt-3 space-y-2">
         <div className="w-full bg-[#0a0a0a] rounded-full h-2 overflow-hidden">
           <div
-            className={`h-full transition-all duration-300 ease-out ${
-              isTableFile ? 'bg-blue-500' : 'bg-green-500'
-            }`}
+            className={`h-full transition-all duration-300 ease-out ${isTableFile ? 'bg-blue-500' : 'bg-green-500'
+              }`}
             style={{ width: `${percent}%` }}
           />
         </div>
@@ -232,8 +231,8 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
             {doc.status === 'uploading'
               ? 'Uploading...'
               : isTableFile
-              ? 'Processing tabular data...'
-              : 'Processing document...'}
+                ? 'Processing tabular data...'
+                : 'Processing document...'}
           </span>
           <span className={`font-medium ${isTableFile ? 'text-blue-400' : 'text-green-400'}`}>
             {percent}%
@@ -311,7 +310,7 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
               <label className="flex-1">
                 <input
                   type="file"
-                  accept={isTableMode ? '.csv,.xlsx,.xls' : '.txt,.pdf,.docx'}
+                  accept={isTableMode ? '.csv,.xlsx,.xls' : '.txt,.pdf,.docx,.epub,application/epub+zip'}
                   onChange={handleFileUpload}
                   disabled={uploading}
                   multiple
@@ -342,7 +341,7 @@ export default function UploadDocuments({ open, onOpenChange }: UploadDocumentsP
             <p className="text-sm text-gray-500 mt-2">
               {isTableMode
                 ? 'Supported formats: .csv, .xlsx, .xls (max 100MB each) • Select multiple files'
-                : 'Supported formats: .txt, .pdf, .docx (max 100MB each) • Select multiple files'}
+                : 'Supported formats: .txt, .pdf, .docx, .epub (max 100MB each) • Select multiple files'}
             </p>
           </Card>
 

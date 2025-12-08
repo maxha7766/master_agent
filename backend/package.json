@@ -26,6 +26,7 @@
     "cohere-ai": "^7.19.0",
     "dotenv": "^17.2.3",
     "duck-duck-scrape": "^2.2.7",
+    "epub2": "^3.0.2",
     "express": "^5.1.0",
     "gpt-tokenizer": "^3.4.0",
     "multer": "^2.0.2",

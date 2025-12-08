@@ -1,0 +1,190 @@
+
+> frontend@0.1.0 lint
+> eslint
+
+
+/Users/heathmaxwell/master_agent/frontend/app/(auth)/login/page.tsx
+   51:14  warning  'error' is defined but never used                                @typescript-eslint/no-unused-vars
+  127:16  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/app/(auth)/reset/page.tsx
+   50:14  warning  'error' is defined but never used                                @typescript-eslint/no-unused-vars
+   92:14  warning  'error' is defined but never used                                @typescript-eslint/no-unused-vars
+  115:19  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  158:18  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/app/(auth)/signup/page.tsx
+  69:14  warning  'error' is defined but never used  @typescript-eslint/no-unused-vars
+
+/Users/heathmaxwell/master_agent/frontend/app/(dashboard)/layout.tsx
+  190:23  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+
+/Users/heathmaxwell/master_agent/frontend/app/(dashboard)/memories/page.tsx
+   39:30  warning  Unexpected any. Specify a different type                                                                     @typescript-eslint/no-explicit-any
+   63:6   warning  React Hook useEffect has a missing dependency: 'loadData'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  174:40  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`                                              react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/app/(dashboard)/settings/page.tsx
+   72:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  104:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  264:57  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  272:28  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/app/(dashboard)/usage/page.tsx
+   33:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   45:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  155:26  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+  164:26  error    `'` can be escaped with `&apos;`, `&lsquo;`, `&#39;`, `&rsquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/app/api/search-card/route.ts
+   95:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  207:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  244:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  264:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  286:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  292:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  319:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  323:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+
+/Users/heathmaxwell/master_agent/frontend/app/diagnostic/page.tsx
+   19:13  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   26:96  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   75:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   84:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+   95:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  110:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  127:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  139:21  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/app/test-api/page.tsx
+   47:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+   90:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  111:57  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  117:21  warning  Unexpected any. Specify a different type                         @typescript-eslint/no-explicit-any
+  141:48  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  141:58  error    `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/components/cards/GradedCardTable.tsx
+  240:9   error  'result' is never reassigned. Use 'const' instead                prefer-const
+  691:26  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  691:40  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/components/cards/SearchResultsModal.tsx
+  43:5  error  Error: Calling setState synchronously within an effect can trigger cascading renders
+
+Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+* Update external systems with the latest state from React.
+* Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+
+Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).
+
+/Users/heathmaxwell/master_agent/frontend/components/cards/SearchResultsModal.tsx:43:5
+  41 |   // Reset selections when results change
+  42 |   useEffect(() => {
+> 43 |     setSelectedIndices(new Set());
+     |     ^^^^^^^^^^^^^^^^^^ Avoid calling setState() directly within an effect
+  44 |   }, [results]);
+  45 |
+  46 |   if (!isOpen) return null;  react-hooks/set-state-in-effect
+
+/Users/heathmaxwell/master_agent/frontend/components/chat/ConversationSidebar.tsx
+  35:6   warning  React Hook useEffect has a missing dependency: 'currentConversation'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+  43:20  warning  Unexpected any. Specify a different type                                                                                @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/components/chat/MessageInput.tsx
+   32:3   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+   38:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+   67:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+   81:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+   89:7   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+  104:7   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+  113:7   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+  119:7   warning  Unexpected console statement. Only these console methods are allowed: error, warn                                                                                                                                                                                                        no-console
+  145:13  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/heathmaxwell/master_agent/frontend/components/chat/MessageList.tsx
+  57:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/heathmaxwell/master_agent/frontend/components/documents/KnowledgeBase.tsx
+  78:6  warning  React Hook useEffect has a missing dependency: 'fetchDocuments'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/heathmaxwell/master_agent/frontend/components/documents/KnowledgeDialog.tsx
+  118:6  warning  React Hook useEffect has a missing dependency: 'fetchDocuments'. Either include it or remove the dependency array  react-hooks/exhaustive-deps
+
+/Users/heathmaxwell/master_agent/frontend/components/images/ImageGenerationDialog.tsx
+  254:17  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+/Users/heathmaxwell/master_agent/frontend/components/research/ResearchDialog.tsx
+  59:19  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/components/research/ResearchProgress.tsx
+  106:9   error    'interval' is never reassigned. Use 'const' instead  prefer-const
+  161:39  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  177:35  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  178:45  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+  179:48  warning  Unexpected any. Specify a different type             @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/components/research/ResearchResults.tsx
+  45:52  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+  45:60  error  `"` can be escaped with `&quot;`, `&ldquo;`, `&#34;`, `&rdquo;`  react/no-unescaped-entities
+
+/Users/heathmaxwell/master_agent/frontend/components/video/VideoGenerator.tsx
+  147:41  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  172:75  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  218:41  warning  Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+  243:70  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  256:73  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+  269:75  warning  Unexpected any. Specify a different type                                                                                                                                                                                                                                                 @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/debug-toggle.js
+    1:19  error    A `require()` style import is forbidden                                            @typescript-eslint/no-require-imports
+    4:3   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   16:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   25:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   36:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   40:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   43:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   59:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   62:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   79:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   82:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   99:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  102:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  111:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  114:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  127:7   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  129:7   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  138:9   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  142:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  148:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+
+/Users/heathmaxwell/master_agent/frontend/lib/api.ts
+   30:3   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   42:5   warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   70:15  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  161:62  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  169:24  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+  387:28  warning  Unexpected any. Specify a different type                                           @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/lib/websocket.ts
+   42:9  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   54:9  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+   74:9  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+  159:5  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+
+/Users/heathmaxwell/master_agent/frontend/lib/websocketTypes.ts
+  212:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  219:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  225:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  232:9  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+/Users/heathmaxwell/master_agent/frontend/store/conversation.ts
+  358:7  warning  Unexpected console statement. Only these console methods are allowed: error, warn  no-console
+
+/Users/heathmaxwell/master_agent/frontend/store/documents.ts
+  25:58  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+  73:64  warning  Unexpected any. Specify a different type  @typescript-eslint/no-explicit-any
+
+✖ 111 problems (18 errors, 93 warnings)
+  1 error and 0 warnings potentially fixable with the `--fix` option.
+

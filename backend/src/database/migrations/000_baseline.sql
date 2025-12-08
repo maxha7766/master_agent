@@ -1,0 +1,10 @@
+-- 000_baseline.sql
+-- Created: 2025-12-07
+--
+-- NOTE: The original baseline was corrupt (23GB) and deleted.
+-- Automatic regeneration via pg_dump failed due to network connection issues (port 5432/6543 blocked).
+--
+-- Future Action:
+-- Run 'supabase db dump --linked > 000_baseline.sql' from a machine with access to the database port.
+--
+-- For now, the database schema exists in the live Supabase instance and database.types.ts matches it.

@@ -16,7 +16,7 @@ if (!projectRef || !accessToken) {
     process.exit(1);
 }
 
-const migrationPath = path.resolve(__dirname, 'src/database/migrations/007_create_videos_table.sql');
+const migrationPath = path.resolve(__dirname, 'src/database/migrations/008_cleanup_unused_tables.sql');
 const migrationSQL = readFileSync(migrationPath, 'utf-8');
 
 async function runMigration() {

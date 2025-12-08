@@ -141,7 +141,7 @@ export class DocumentProcessor {
 
       // Update document status with summary and title
       await this.updateProgress(documentId, 'finalizing', 95, 'Finalizing...');
-      const { data: updateData, error: updateError} = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('documents')
         .update({
           status: 'completed',
@@ -349,15 +349,64 @@ export class DocumentProcessor {
   /**
    * Extract text from file based on type
    */
+  /**
+   * Extract text from file based on type
+   */
   async extractText(filePath: string, fileType: string): Promise<string> {
-    // For now, support only plain text files
-    // TODO: Add PDF, DOCX, etc. extraction using libraries
-    if (fileType === 'text/plain' || fileType === 'txt') {
+    const type = fileType.toLowerCase();
+
+    if (type === 'text/plain' || type === 'txt') {
       const fs = await import('fs');
       return fs.promises.readFile(filePath, 'utf-8');
     }
 
+    if (type === 'application/epub+zip' || type === 'epub' || filePath.endsWith('.epub')) {
+      return this.extractEpub(filePath);
+    }
+
+    // TODO: Add PDF, DOCX, etc. extraction using libraries
     throw new Error(`Unsupported file type: ${fileType}`);
+  }
+
+  /**
+   * Extract text from EPUB file
+   */
+  private async extractEpub(filePath: string): Promise<string> {
+    // Dynamic import to avoid issues if module missing
+    const EPub = (await import('epub2')).EPub;
+
+    return new Promise((resolve, reject) => {
+      EPub.createAsync(filePath)
+        .then(async (epub) => {
+          let fullText = '';
+
+          // Iterate through flow (reading order)
+          for (const chapter of epub.flow) {
+            try {
+              const text = await epub.getChapterAsync(chapter.id);
+              // Strip HTML tags and decode entities
+              const plainText = text
+                .replace(/<[^>]+>/g, ' ') // Replace tags with space
+                .replace(/&nbsp;/g, ' ')
+                .replace(/&amp;/g, '&')
+                .replace(/&lt;/g, '<')
+                .replace(/&gt;/g, '>')
+                .replace(/&quot;/g, '"')
+                .replace(/\s+/g, ' ') // Normalize whitespace
+                .trim();
+
+              if (plainText) {
+                fullText += plainText + '\n\n';
+              }
+            } catch (err) {
+              log.warn(`Failed to extract chapter ${chapter.id} from EPUB`, { error: err });
+            }
+          }
+
+          resolve(fullText.trim());
+        })
+        .catch(reject);
+    });
   }
 }
 
