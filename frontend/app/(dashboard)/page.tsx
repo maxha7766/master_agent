@@ -82,13 +82,8 @@ export default function ChatPage() {
     }
   };
 
-  if (!currentConversation) {
-    return (
-      <div className="flex items-center justify-center h-full bg-[#212121]">
-        <p className="text-gray-400">Loading conversation...</p>
-      </div>
-    );
-  }
+  // REMOVED: Blocking loading state.
+  // if (!currentConversation) { ... }
 
   return (
     <div className="flex h-full bg-[#212121] overflow-hidden">
@@ -131,7 +126,7 @@ export default function ChatPage() {
 
         {/* Messages - Scrollable Area with proper mobile sizing */}
         <div className="flex-1 overflow-y-auto overflow-x-hidden px-3 sm:px-6 py-4 min-h-0 scroll-smooth">
-          <MessageList messages={currentConversation.messages} />
+          <MessageList messages={currentConversation?.messages || []} />
           {streamingMessage && (
             <StreamingMessage message={streamingMessage} />
           )}
