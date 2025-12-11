@@ -63,6 +63,16 @@ export class DocumentProcessor {
   }
 
   /**
+   * Sanitize text content to remove null bytes and problematic characters
+   */
+  private sanitizeContent(text: string): string {
+    return text
+      .replace(/\u0000/g, '') // Remove null bytes (Postgres doesn't like them)
+      .replace(/\\u0000/g, '') // Remove escaped null bytes
+      .replace(/\ufffd/g, ''); // Remove replacement characters
+  }
+
+  /**
    * Process uploaded document: extract text, chunk, generate embeddings, store
    */
   async processDocument(
@@ -72,6 +82,9 @@ export class DocumentProcessor {
     fileName: string = 'document.txt'
   ): Promise<ProcessingResult> {
     try {
+      // sanitize content immediately
+      const sanitizedContent = this.sanitizeContent(content);
+
       // Update status to processing
       await supabase
         .from('documents')
@@ -88,13 +101,13 @@ export class DocumentProcessor {
       log.info('Starting document processing', {
         documentId,
         userId,
-        contentLength: content.length,
+        contentLength: sanitizedContent.length,
       });
 
       // Extract document title
       await this.updateProgress(documentId, 'title', 10, 'Extracting document title...');
       log.info('Extracting title', { documentId });
-      const titleResult = await titleExtractor.extractTitle(content, fileName);
+      const titleResult = await titleExtractor.extractTitle(sanitizedContent, fileName);
 
       log.info('Title extracted', {
         documentId,
@@ -106,13 +119,13 @@ export class DocumentProcessor {
       await this.updateProgress(documentId, 'metadata', 20, 'Extracting document metadata...');
       log.info('Extracting metadata', { documentId });
       const extractedMetadata = await metadataExtractor.extractMetadata(
-        content,
+        sanitizedContent,
         fileName
       );
 
       // Split into chunks
       await this.updateProgress(documentId, 'chunking', 35, 'Splitting document into chunks...');
-      const chunks = this.chunkText(content);
+      const chunks = this.chunkText(sanitizedContent);
 
       log.info('Text chunked', {
         documentId,
@@ -217,8 +230,13 @@ export class DocumentProcessor {
   private chunkText(text: string): DocumentChunk[] {
     const chunks: DocumentChunk[] = [];
 
-    // Simple sentence-based chunking
-    const sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+    // Split by sentence, but check for massive sentences without punctuation
+    let sentences = text.match(/[^.!?]+[.!?]+/g) || [text];
+
+    // If we only have one massive "sentence" (e.g. bad PDF extraction), force split by length
+    if (sentences.length === 1 && sentences[0].length > 4000) { // arbitrary char limit (~1000 tokens)
+      sentences = text.match(/.{1,1000}/g) || [text];
+    }
 
     let currentChunk = '';
     let currentTokens = 0;
@@ -226,6 +244,38 @@ export class DocumentProcessor {
     let startChar = 0;
 
     for (const sentence of sentences) {
+      // Force split weirdly long sentences that made it here
+      if (sentence.length > 6000) {
+        // Skip or handle massive garbage strings? Use substring
+        // For now, let's just take the first 4000 chars to avoid hitting API limits
+        // Ideally we recursive split, but simple clamp is safer for stability
+        const clamped = sentence.substring(0, 4000);
+        const sentenceTokens = this.estimateTokens(clamped);
+
+        if (currentChunk) {
+          chunks.push({
+            content: currentChunk.trim(),
+            chunkIndex: chunkIndex++,
+            startChar,
+            endChar: startChar + currentChunk.length,
+            tokenCount: currentTokens,
+          });
+          startChar += currentChunk.length;
+          currentChunk = '';
+          currentTokens = 0;
+        }
+
+        chunks.push({
+          content: clamped,
+          chunkIndex: chunkIndex++,
+          startChar,
+          endChar: startChar + clamped.length,
+          tokenCount: sentenceTokens,
+        });
+        startChar += clamped.length;
+        continue;
+      }
+
       const sentenceTokens = this.estimateTokens(sentence);
 
       if (currentTokens + sentenceTokens > this.CHUNK_SIZE && currentChunk) {
@@ -239,10 +289,11 @@ export class DocumentProcessor {
         });
 
         // Start new chunk with overlap
+        // Robust overlap: handle case where currentChunk is smaller than overlap
         const overlapSentences = currentChunk.split(/[.!?]+/).slice(-2).join('.');
         currentChunk = overlapSentences + ' ' + sentence;
         currentTokens = this.estimateTokens(currentChunk);
-        startChar += currentChunk.length - currentChunk.length;
+        startChar += (chunks[chunks.length - 1].content.length - currentChunk.length + sentence.length); // approx
       } else {
         currentChunk += ' ' + sentence;
         currentTokens += sentenceTokens;
