@@ -11,10 +11,11 @@ import Link from 'next/link';
 import { useAuthStore } from '../../store/auth';
 import { wsClient } from '../../lib/websocket';
 import { Button } from '../../components/ui/button';
-import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon, Award, Film } from 'lucide-react';
+import { MessageSquare, FileText, Database, Search, Settings, BarChart3, Brain, Menu, X, ImageIcon, Award } from 'lucide-react';
 import KnowledgeDialog from '../../components/documents/KnowledgeDialog';
 import ResearchDialog from '../../components/research/ResearchDialog';
-import { ImageGenerationDialog, type ImageGenerationParams } from '../../components/images/ImageGenerationDialog';
+import { UnifiedMediaDialog } from '../../components/input/UnifiedMediaDialog';
+import type { ImageGenerationParams } from '../../components/images/ImageGenerationDialog'; // Keep type import or move it
 import ResearchProgress from '../../components/research/ResearchProgress';
 import { toast } from 'sonner';
 
@@ -107,7 +108,7 @@ export default function DashboardLayout({
         <div className="px-2 sm:px-4">
           <div className="flex justify-between items-center h-12">
             <div className="flex items-center space-x-2 sm:space-x-8">
-              <h1 className="text-sm sm:text-lg font-semibold text-white">Personal AI Assistant</h1>
+              <h1 className="text-sm sm:text-lg font-semibold text-white">Bob</h1>
 
               {/* Desktop Navigation - Hidden on mobile */}
               <nav className="hidden md:flex items-center space-x-1">
@@ -165,15 +166,8 @@ export default function DashboardLayout({
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
                 >
                   <ImageIcon className="w-4 h-4" />
-                  <span>Image</span>
+                  <span>Media</span>
                 </button>
-                <Link
-                  href="/video"
-                  className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
-                >
-                  <Film className="w-4 h-4" />
-                  <span>Video</span>
-                </Link>
                 <Link
                   href="/settings"
                   className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors text-sm"
@@ -327,16 +321,8 @@ export default function DashboardLayout({
                 className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
               >
                 <ImageIcon className="w-5 h-5" />
-                <span>Image</span>
+                <span>Media</span>
               </button>
-              <Link
-                href="/video"
-                onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center space-x-3 px-3 py-2.5 rounded-lg text-gray-300 hover:text-white hover:bg-gray-800 transition-colors"
-              >
-                <Film className="w-5 h-5" />
-                <span>Video</span>
-              </Link>
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
@@ -386,10 +372,10 @@ export default function DashboardLayout({
           setActiveResearchId(projectId);
         }}
       />
-      <ImageGenerationDialog
+      <UnifiedMediaDialog
         open={imageDialogOpen}
         onOpenChange={setImageDialogOpen}
-        onGenerate={handleGenerateImage}
+        onGenerateImage={handleGenerateImage}
       />
     </div>
   );

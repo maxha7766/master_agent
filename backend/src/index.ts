@@ -77,7 +77,7 @@ app.use('/api/research', researchRouter);
 app.use('/api/settings', settingsRouter);
 app.use('/api/usage', usageRouter);
 app.use('/api/memories', memoriesRouter);
-app.use('/api/memories', memoriesRouter);
+// Duplicate removed
 app.use('/api/images', imagesRouter);
 app.use('/api/videos', videosRouter);
 

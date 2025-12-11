@@ -66,14 +66,15 @@ export default function MemoriesPage() {
     try {
       setLoading(true);
 
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
       const [memoriesRes, entitiesRes, statsRes] = await Promise.all([
-        fetch('http://localhost:3001/api/memories', {
+        fetch(`${apiUrl}/api/memories`, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
         }),
-        fetch('http://localhost:3001/api/memories/entities', {
+        fetch(`${apiUrl}/api/memories/entities`, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
         }),
-        fetch('http://localhost:3001/api/memories/stats', {
+        fetch(`${apiUrl}/api/memories/stats`, {
           headers: { Authorization: `Bearer ${session?.access_token}` },
         }),
       ]);
@@ -94,7 +95,8 @@ export default function MemoriesPage() {
 
   async function handleDeleteMemory(memoryId: string) {
     try {
-      await fetch(`http://localhost:3001/api/memories/${memoryId}`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      await fetch(`${apiUrl}/api/memories/${memoryId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });
@@ -106,7 +108,8 @@ export default function MemoriesPage() {
 
   async function handleConsolidate() {
     try {
-      const res = await fetch('http://localhost:3001/api/memories/consolidate', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${apiUrl}/api/memories/consolidate`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +127,8 @@ export default function MemoriesPage() {
 
   async function handleRecalculateImportance() {
     try {
-      const res = await fetch('http://localhost:3001/api/memories/recalculate-importance', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const res = await fetch(`${apiUrl}/api/memories/recalculate-importance`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${session?.access_token}` },
       });

@@ -77,7 +77,7 @@ export default function SignupPage() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md p-8 bg-white shadow-lg text-black">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-black">Create Account</h1>
+          <h2 className="mt-6 text-3xl font-bold tracking-tight text-white">Create your Bob account</h2>
           <p className="text-gray-700 mt-2">
             Get started with your Personal AI Assistant
           </p>

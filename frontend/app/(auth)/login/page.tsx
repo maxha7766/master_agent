@@ -60,9 +60,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-md p-8 bg-white shadow-lg text-black">
         <div className="mb-8 text-center">
           <h1 className="text-3xl font-bold text-black">Welcome Back</h1>
-          <p className="text-gray-700 mt-2">
-            Sign in to your Personal AI Assistant
-          </p>
+          <h2 className="mt-6 text-3xl font-bold tracking-tight text-white">Sign in to Bob</h2>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6 text-black">

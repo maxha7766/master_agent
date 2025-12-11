@@ -47,13 +47,10 @@ export default function ChatPage() {
   }, []);
 
   // Create initial conversation if none exists
+  // MODIFIED: Only set loading to false; do NOT create conversation automatically.
+  // We want to wait until the first message is sent.
   useEffect(() => {
-    if (user && !currentConversation) {
-      createConversation().catch((err) => {
-        console.error('Failed to create conversation:', err);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Intentionally empty or just ensure loading state is cleared if needed
   }, [user]);
 
   const handleNewConversation = async () => {
@@ -62,8 +59,27 @@ export default function ChatPage() {
   };
 
   const handleSendMessage = async (content: string, attachedImageUrl?: string) => {
-    if (!currentConversation || !wsConnected) return;
-    await sendMessage(currentConversation.id, content, attachedImageUrl);
+    if (!wsConnected) return;
+
+    let conversationId = currentConversation?.id;
+
+    if (!conversationId) {
+      // Create new conversation on the fly
+      try {
+        const newConv = await createConversation();
+        conversationId = newConv.id;
+        // Note: createConversation in store should set currentConversation, 
+        // but we might need to explicitly load it if the store doesn't auto-select.
+        // The existing store implementation of createConversation DOES update state.currentConversation.
+      } catch (err) {
+        console.error('Failed to create conversation on send:', err);
+        return;
+      }
+    }
+
+    if (conversationId) {
+      await sendMessage(conversationId, content, attachedImageUrl);
+    }
   };
 
   if (!currentConversation) {
