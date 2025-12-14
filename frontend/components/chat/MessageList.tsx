@@ -5,13 +5,26 @@
  * Displays conversation history
  */
 
+import { useEffect, useRef } from 'react';
 import type { Message } from '../../lib/api';
 
 interface MessageListProps {
   messages: Message[];
 }
 
+
 export default function MessageList({ messages }: MessageListProps) {
+  // Auto-scroll logic
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
   if (!messages || messages.length === 0) {
     return (
       <div className="flex items-center justify-center h-full text-gray-400">
@@ -32,14 +45,11 @@ export default function MessageList({ messages }: MessageListProps) {
           key={message.id}
           className={`mb-6 ${message.role === 'user' ? 'ml-auto max-w-2xl' : ''}`}
         >
-          {/* Label */}
-          {/* Label Removed for Cleaner UI */}
-
           {/* Message Content - Bubble Style */}
           <div
-            className={`px-4 py-3 rounded-2xl shadow-sm text-[15px] leading-relaxed whitespace-pre-wrap ${message.role === 'user'
-              ? 'bg-blue-600 text-white rounded-tr-sm'
-              : 'bg-[#2f2f2f] text-gray-100 rounded-tl-sm border border-gray-700/50'
+            className={`px-0 py-1 text-[15px] leading-relaxed whitespace-pre-wrap ${message.role === 'user'
+              ? 'text-gray-100' // User text color
+              : 'text-gray-100 typewriter-effect' // Assistant text color with potential typewriter class hooks
               }`}
           >
             {message.content}
@@ -97,6 +107,7 @@ export default function MessageList({ messages }: MessageListProps) {
           )}
         </div>
       ))}
+      <div ref={messagesEndRef} />
     </div>
   );
 }

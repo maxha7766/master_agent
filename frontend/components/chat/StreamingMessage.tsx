@@ -31,11 +31,11 @@ export default function StreamingMessage({ message }: StreamingMessageProps) {
   if (!message.content) {
     return (
       <div className="mb-6">
-        <div className="text-xs text-gray-500 mb-1 font-medium text-left">Assistant</div>
-        <div className="flex gap-1 items-center">
-          <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></span>
-          <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></span>
-          <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></span>
+        <div className="text-xs text-gray-500 mb-1 font-medium text-left">Bob</div>
+        <div className="relative w-8 h-8">
+          <div className="absolute top-0 left-0 w-full h-full border-2 border-gray-600 rounded-full animate-spin border-t-transparent" style={{ animationDuration: '1s' }}></div>
+          <div className="absolute top-1 left-1 w-6 h-6 border-2 border-gray-500 rounded-full animate-spin border-t-transparent" style={{ animationDuration: '1.5s', animationDirection: 'reverse' }}></div>
+          <div className="absolute top-2 left-2 w-4 h-4 border-2 border-gray-400 rounded-full animate-spin border-t-transparent" style={{ animationDuration: '0.8s' }}></div>
         </div>
       </div>
     );
@@ -44,7 +44,7 @@ export default function StreamingMessage({ message }: StreamingMessageProps) {
   return (
     <div className="mb-6">
       {/* Agent label */}
-      <div className="text-xs text-gray-500 mb-1 font-medium text-left">Assistant</div>
+      <div className="text-xs text-gray-500 mb-1 font-medium text-left">Bob</div>
 
       {/* Content - no bubble, just text, aligned left, full width */}
       <div className="text-[15px] leading-relaxed text-gray-100 whitespace-pre-wrap text-left">

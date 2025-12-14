@@ -193,16 +193,16 @@ export default function MessageInput({ onSend, disabled }: MessageInputProps) {
           onKeyDown={handleKeyDown}
           placeholder={attachedImage?.url ? "Describe how to edit..." : "Message"}
           disabled={disabled}
-          rows={1}
-          className="flex-1 bg-transparent border-0 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 text-[16px] px-0 py-1.5 resize-none min-h-[36px] max-h-[120px]"
+          rows={4} // Default to 4 lines
+          className="flex-1 bg-transparent border-0 text-white placeholder:text-gray-500 focus-visible:ring-0 focus-visible:ring-offset-0 text-[16px] px-0 py-1.5 resize-none min-h-[96px] max-h-[200px]"
         />
 
         <Button
           onClick={handleSend}
           disabled={disabled || !message.trim()}
           className={`rounded-full h-8 w-8 p-0 transition-all flex-shrink-0 mb-0.5 ${message.trim()
-              ? 'bg-blue-600 hover:bg-blue-500 text-white'
-              : 'bg-gray-700 text-gray-500 cursor-not-allowed'
+            ? 'bg-blue-600 hover:bg-blue-500 text-white'
+            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
             }`}
           size="icon"
         >

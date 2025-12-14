@@ -39,3 +39,31 @@ html, body, #__next {
 .pb-safe {
   padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0.75rem));
 }
+
+/* Typewriter Effect */
+.typewriter-effect {
+  white-space: pre-wrap; /* Keeps whitespace */
+  animation: typing 0.5s steps(40, end);
+}
+
+/* Blinking cursor effect for streaming messages */
+.typing-cursor::after {
+  content: '▋';
+  animation: blink 1s step-end infinite;
+  margin-left: 2px;
+  color: #9ca3af;
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+@keyframes typing {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
