@@ -377,7 +377,7 @@ async function* synthesizeResponse(
   tabularData: any,
   memoryContext: string, // OPTIMIZATION: Now passed in instead of fetched here
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string }>,
-  model: string = 'claude-sonnet-4-5-20250929',
+  model: string = 'claude-3-haiku-20240307',
   temperature: number = 0.7,
   chatSettings?: ChatSettings,
   conversationMetadata?: { startTime?: Date; lastMessageTime?: Date }
@@ -574,7 +574,7 @@ export async function* handleUserQuery(
   userQuery: string,
   userId: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string; created_at?: string; image_url?: string }> = [],
-  model: string = 'claude-sonnet-4-5-20250929',
+  model: string = 'claude-3-haiku-20240307',
   temperature: number = 0.7,
   chatSettings?: ChatSettings,
   attachedImageUrl?: string // Image attached via chat "+" button

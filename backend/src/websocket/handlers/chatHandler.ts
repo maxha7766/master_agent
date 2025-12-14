@@ -83,7 +83,8 @@ export async function handleChatMessage(
       return;
     }
 
-    const model = settings?.default_chat_model || 'claude-sonnet-4-5-20250929';
+    // Fallback to Haiku as Sonnet 4.5 is overloaded/unavailable
+    const model = settings?.default_chat_model || 'claude-3-haiku-20240307';
     const temperature = 0.7;
 
     // Skip pre-generation token counting - use conservative estimate
