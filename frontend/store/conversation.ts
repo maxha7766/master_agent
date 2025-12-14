@@ -219,19 +219,19 @@ export const useConversationStore = create<ConversationState>((set, get) => {
         set((state) => ({
           currentConversation: state.currentConversation
             ? {
-                ...state.currentConversation,
-                messages: [
-                  ...state.currentConversation.messages,
-                  {
-                    id: `temp-${Date.now()}`,
-                    conversationId,
-                    role: 'user' as const,
-                    content,
-                    imageUrl: attachedImageUrl, // Show attached image in user message
-                    createdAt: new Date().toISOString(),
-                  },
-                ],
-              }
+              ...state.currentConversation,
+              messages: [
+                ...state.currentConversation.messages,
+                {
+                  id: `temp-${Date.now()}`,
+                  conversationId,
+                  role: 'user' as const,
+                  content,
+                  imageUrl: attachedImageUrl, // Show attached image in user message
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+            }
             : null,
         }));
       } catch (error) {
@@ -294,9 +294,9 @@ function handleWebSocketMessage(
       set((state) => ({
         streamingMessage: state.streamingMessage
           ? {
-              ...state.streamingMessage,
-              content: state.streamingMessage.content + message.chunk,
-            }
+            ...state.streamingMessage,
+            content: state.streamingMessage.content + message.chunk,
+          }
           : null,
       }));
       break;
@@ -309,25 +309,26 @@ function handleWebSocketMessage(
           streamingMessage: null, // Clear immediately to prevent duplicate display
           currentConversation: state.currentConversation
             ? {
-                ...state.currentConversation,
-                messages: [
-                  ...state.currentConversation.messages,
-                  {
-                    id: message.messageId,
-                    conversationId: state.currentConversation.id,
-                    role: 'assistant' as const,
-                    content: streamingMsg.content,
-                    agent: streamingMsg.agent,
-                    model: streamingMsg.model,
-                    tokensUsed: message.metadata.tokensUsed.total,
-                    costUsd: message.metadata.costUsd,
-                    createdAt: new Date().toISOString(),
-                    sources: streamingMsg.sources, // Include sources if available
-                    imageUrl: message.metadata.imageUrl, // Include image URL if available
-                    imageMetadata: message.metadata.imageMetadata, // Include image metadata if available
-                  },
-                ],
-              }
+              ...state.currentConversation,
+              messages: [
+                ...state.currentConversation.messages,
+                {
+                  id: message.messageId,
+                  conversationId: state.currentConversation.id,
+                  role: 'assistant' as const,
+                  content: streamingMsg.content,
+                  agent: streamingMsg.agent,
+                  model: streamingMsg.model,
+                  tokensUsed: message.metadata.tokensUsed.total,
+                  costUsd: message.metadata.costUsd,
+                  createdAt: new Date().toISOString(),
+                  sources: streamingMsg.sources, // Include sources if available
+                  imageUrl: message.metadata.imageUrl, // Include image URL if available
+                  videoUrl: message.metadata.videoUrl || message.metadata.imageMetadata?.videoUrl, // Include video URL if available (check both locations)
+                  imageMetadata: message.metadata.imageMetadata, // Include image metadata if available
+                },
+              ],
+            }
             : null,
           sending: false,
         }));
@@ -338,9 +339,9 @@ function handleWebSocketMessage(
       set((state) => ({
         streamingMessage: state.streamingMessage
           ? {
-              ...state.streamingMessage,
-              sources: message.sources,
-            }
+            ...state.streamingMessage,
+            sources: message.sources,
+          }
           : null,
       }));
       break;

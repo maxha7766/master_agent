@@ -59,6 +59,23 @@ export default function MessageList({ messages }: MessageListProps) {
             </div>
           )}
 
+          {/* Video Display */}
+          {message.videoUrl && (
+            <div className={`mt-3 ${message.role === 'user' ? 'flex justify-end' : ''}`}>
+              <div className="relative inline-block max-w-lg w-full">
+                <video
+                  src={message.videoUrl}
+                  controls
+                  poster={message.imageUrl} // Use image as poster if available
+                  className="rounded-lg border border-gray-700 shadow-lg w-full h-auto bg-black"
+                  preload="metadata"
+                >
+                  Your browser does not support the video tag.
+                </video>
+              </div>
+            </div>
+          )}
+
           {/* Citations */}
           {message.sources && message.sources.length > 0 && (
             <div className="mt-3">

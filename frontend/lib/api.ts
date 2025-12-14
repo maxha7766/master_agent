@@ -357,6 +357,7 @@ export interface Message {
   costUsd?: number;
   sources?: SearchSource[];
   imageUrl?: string;
+  videoUrl?: string;
   imageMetadata?: {
     operation: string;
     width: number;

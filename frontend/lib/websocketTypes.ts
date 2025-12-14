@@ -187,6 +187,7 @@ export interface MessageMetadata {
   latencyMs: number;
   finishReason: string;
   imageUrl?: string;
+  videoUrl?: string;
   imageUrls?: string[];
   imageMetadata?: {
     operation: string;
@@ -195,6 +196,7 @@ export interface MessageMetadata {
     height: number;
     prompt?: string;
     generatedImageUrl?: string;
+    videoUrl?: string;
   };
 }
 
