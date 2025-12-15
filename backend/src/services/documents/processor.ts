@@ -330,8 +330,8 @@ export class DocumentProcessor {
   ): Promise<number[][]> {
     const texts = chunks.map((c) => c.content);
 
-    // Batch embeddings in groups of 100 (OpenAI limit is 2048)
-    const batchSize = 100;
+    // Batch embeddings in groups of 50 (OpenAI limit is 2048, but safer for memory/network)
+    const batchSize = 50;
     const embeddings: number[][] = [];
 
     for (let i = 0; i < texts.length; i += batchSize) {
@@ -385,8 +385,8 @@ export class DocumentProcessor {
       },
     }));
 
-    // Insert in batches
-    const batchSize = 100;
+    // Insert in batches - Reduced to 25 to prevent statement timeouts
+    const batchSize = 25;
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
       const { error } = await supabase.from('chunks').insert(batch);
