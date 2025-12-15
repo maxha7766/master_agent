@@ -330,8 +330,8 @@ export class DocumentProcessor {
   ): Promise<number[][]> {
     const texts = chunks.map((c) => c.content);
 
-    // Batch embeddings in groups of 50 (OpenAI limit is 2048, but safer for memory/network)
-    const batchSize = 50;
+    // Batch embeddings in groups of 10 for safety during high load
+    const batchSize = 10;
     const embeddings: number[][] = [];
 
     for (let i = 0; i < texts.length; i += batchSize) {
@@ -385,14 +385,48 @@ export class DocumentProcessor {
       },
     }));
 
-    // Insert in batches - Reduced to 25 to prevent statement timeouts
-    const batchSize = 25;
+    // Insert in batches - Reduced to 10 to prevent statement timeouts
+    const batchSize = 10;
+
+    // Retry configuration
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 1000; // 1 second
+
     for (let i = 0; i < records.length; i += batchSize) {
       const batch = records.slice(i, i + batchSize);
-      const { error } = await supabase.from('chunks').insert(batch);
 
-      if (error) {
-        throw new Error(`Failed to store chunks: ${error.message}`);
+      let attempt = 0;
+      let success = false;
+      let lastError = null;
+
+      while (attempt < MAX_RETRIES && !success) {
+        try {
+          const { error } = await supabase.from('chunks').insert(batch);
+
+          if (error) throw error;
+          success = true;
+
+        } catch (error: any) {
+          lastError = error;
+          attempt++;
+
+          // Only retry on timeout or connection errors
+          const isTimeout = error.message?.includes('timeout') || error.code === '57014'; // statement_timeout
+          const isConnection = error.message?.includes('connection') || error.code === '08006'; // connection_failure
+
+          if ((isTimeout || isConnection) && attempt < MAX_RETRIES) {
+            // Exponential backoff: 1s, 2s, 4s
+            const delay = RETRY_DELAY * Math.pow(2, attempt - 1);
+            log.warn(`Batch insert failed (attempt ${attempt}/${MAX_RETRIES}), retrying in ${delay}ms...`, {
+              documentId,
+              error: error.message
+            });
+            await new Promise(resolve => setTimeout(resolve, delay));
+          } else {
+            // Non-retryable error or max retries reached
+            throw new Error(`Failed to store chunks after ${attempt} attempts: ${error.message}`);
+          }
+        }
       }
     }
   }
