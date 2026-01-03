@@ -174,7 +174,7 @@ export class WritingAgent {
 
     const result = await this.llmProvider.chat(
       [{ role: 'user', content: prompt }],
-      'claude-sonnet-4-5-20250929',
+      'claude-3-haiku-20240307',
       {
         maxTokens: Math.ceil(targetWords * 1.5), // ~1.5 tokens per word
         temperature: 0.7, // Balanced creativity and consistency

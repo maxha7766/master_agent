@@ -75,7 +75,7 @@ export async function generateSQLQuery(
   userQuery: string,
   documents: TabularDocument[],
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-5-20250929'
+  model: string = 'claude-3-haiku-20240307'
 ): Promise<{ sql: string; explanation: string; documentIds: string[]; needsClarification?: boolean; clarificationQuestion?: string }> {
   try {
     const provider = LLMFactory.getProvider(model);
@@ -166,9 +166,9 @@ Response: {"confidence": 98, "needsClarification": false, "sql": "SELECT title, 
     // Build conversation context for SQL generation
     const conversationContext = conversationHistory.length > 0
       ? `\n\n**Recent Conversation:**\n${conversationHistory
-          .slice(-6) // Last 3 exchanges
-          .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 200)}`)
-          .join('\n')}\n`
+        .slice(-6) // Last 3 exchanges
+        .map((msg) => `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content.substring(0, 200)}`)
+        .join('\n')}\n`
       : '';
 
     const userPrompt = `${conversationContext}
@@ -286,7 +286,7 @@ export async function formatResults(
   sqlQuery: string,
   results: any[],
   explanation: string,
-  model: string = 'claude-sonnet-4-5-20250929'
+  model: string = 'claude-3-haiku-20240307'
 ): Promise<string> {
   try {
     const provider = LLMFactory.getProvider(model);
@@ -336,7 +336,7 @@ export async function retrieveData(
   userQuery: string,
   userId: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [],
-  model: string = 'claude-sonnet-4-5-20250929'
+  model: string = 'claude-3-haiku-20240307'
 ): Promise<{
   success: boolean;
   data: any[];

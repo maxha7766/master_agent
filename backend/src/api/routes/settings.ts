@@ -30,11 +30,11 @@ router.get('/', async (req: AuthRequest, res) => {
     if (error) {
       // If no settings exist, create default settings
       if (error.code === 'PGRST116') {
-        const { data: newSettings, error: createError} = await supabase
+        const { data: newSettings, error: createError } = await supabase
           .from('user_settings')
           .insert({
             user_id: userId,
-            default_chat_model: 'claude-sonnet-4-5-20250929',
+            default_chat_model: 'claude-3-haiku-20240307',
             monthly_budget_limit: 10.0,
           })
           .select()

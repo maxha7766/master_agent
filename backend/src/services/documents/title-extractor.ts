@@ -22,7 +22,7 @@ export class TitleExtractor {
   async extractTitle(
     content: string,
     fileName: string,
-    model: string = 'claude-sonnet-4-5-20250929'
+    model: string = 'claude-3-haiku-20240307'
   ): Promise<TitleExtractionResult> {
     try {
       const provider = LLMFactory.getProvider(model);
@@ -78,7 +78,7 @@ What is the actual title of this document?`;
 
       // Remove markdown code blocks (```json ... ```)
       if (jsonContent.startsWith('```')) {
-        jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/,'');
+        jsonContent = jsonContent.replace(/^```(?:json)?\s*\n?/i, '').replace(/\n?```\s*$/, '');
       }
 
       const result = JSON.parse(jsonContent);

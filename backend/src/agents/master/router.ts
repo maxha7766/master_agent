@@ -109,7 +109,7 @@ export async function* executeHandler(
   userMessage: string,
   userId: string,
   conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }>,
-  model: string = 'claude-sonnet-4-5-20250929',
+  model: string = 'claude-3-haiku-20240307',
   temperature: number = 0.7,
   chatSettings?: ChatSettings,
   attachedImageUrl?: string

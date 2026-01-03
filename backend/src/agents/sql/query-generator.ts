@@ -37,7 +37,7 @@ export async function generateQuery(
   options: QueryGenerationOptions = {}
 ): Promise<GeneratedQuery> {
   const {
-    model = 'claude-sonnet-4-5-20250929',
+    model = 'claude-3-haiku-20240307',
     temperature = 0,
     maxTokens = 2000,
   } = options;
@@ -185,7 +185,7 @@ export async function generateQueryWithHistory(
   options: QueryGenerationOptions = {}
 ): Promise<GeneratedQuery> {
   const {
-    model = 'claude-sonnet-4-5-20250929',
+    model = 'claude-3-haiku-20240307',
     temperature = 0,
     maxTokens = 2000,
   } = options;
